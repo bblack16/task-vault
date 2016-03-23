@@ -1,33 +1,14 @@
+require 'securerandom'
+
 class TaskVault
 
-  class Task
+  class Task < Component
     include BBLib
     attr_reader :id, :name, :type, :working_dir, :interpreter,
-                :job, :args, :weight, :priority,
+                :job, :args, :weight, :priority, :message_handlers,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
                 :couriers, :thread, :dependencies, :events,
                 :initial_priority, :run_count, :status
-
-    def initialize name:nil, interpreter:nil, working_dir:nil, dependencies:nil, id:nil, type:nil, job:nil, args:nil, weight:1, priority:3, max_life:nil, value_cap:10000, repeat:1, delay:0, message_handler_name:nil
-      init
-      @dargs = []
-      self.type = type
-      self.id = id
-      self.name = name.nil? ? id : name
-      self.job = job
-      self.interpreter = interpreter
-      self.working_dir = working_dir
-      self.args = args
-      self.weight = weight
-      self.priority = priority
-      self.status = :created
-      self.max_life = max_life
-      self.value_cap = value_cap
-      self.delay = delay
-      self.repeat = repeat
-      self.message_handler_name = message_handler_name
-      if dependencies then dependencies.each{ |k, v| add_dependency(k, type: v)} end
-    end
 
     TYPES = [
       :proc, :cmd, :script, :ruby, :eval, :eval_proc
@@ -44,6 +25,8 @@ class TaskVault
         begin
           pr.call(args)
         rescue StandardError, Exception => e
+          queue_msg("Task #{@name} failed. Error message follows")
+          queue_msg(e)
           e
         end
       }
@@ -87,11 +70,12 @@ class TaskVault
     end
 
     def args
-      if defined?(@proc) && @proc.parameters.map{ |t, v| v }.include?(:mh)
-        @args + @dargs + [{mh: @message_handler, value_cap: @value_cap}]
-      else
-        @args + @dargs
-      end
+      # if defined?(@proc) && @proc.parameters.map{ |t, v| v }.include?(:mh)
+      #   @args + @dargs + [{mh: @message_handler, value_cap: @value_cap}]
+      # else
+      #
+      # end
+      @args + @dargs
     end
 
     def weight= w
@@ -153,12 +137,8 @@ class TaskVault
       @start_at = s.is_a?(Time) ? s : Time.now
     end
 
-    def message_handler_name= mh
-      @message_handler_name = [mh].flatten
-    end
-
-    def message_handler= mh
-      @message_handler = mh.is_a?(MessageHandler) || mh.is_a?(Array) && !mh.any?{ |m| !m.is_a?(MessageHandler)} ? [mh].flatten : nil
+    def message_handlers= mh
+      @message_handlers = [mh].flatten
     end
 
     def add_dependency name, type: :wait
@@ -177,13 +157,49 @@ class TaskVault
     def method_missing args
       if @times.include?(args)
         return @times[args]
+      else
+        raise NoMethodError, "Method missing for #{args} on #{self.class}."
       end
     end
 
     def serialize
       values = BBLib.to_hash(self)
       values.hash_path_delete 'initial_priority', 'dargs', 'times', 'thread', 'value', 'run_count', 'id', 'status', 'start_at', 'message_handler', 'proc'
-      values.keys_to_s
+      return values
+    end
+
+    def save path = Dir.pwd, format = :yaml
+      path = path.gsub('\\', '/')
+      name = @name.to_s != '' ? @name : SecureRandom.hex(10);
+      path = (!path.end_with?('/') ? path + '/' : '') + name + '.' + format.to_s
+      case format
+      when :yaml
+        serialize.to_yaml.to_file(path, mode: 'w')
+      when :json
+        serialize.to_json.to_file(path, mode: 'w')
+      when :xml # Currenlty XML cannot be reserialized from
+        serialize.to_xml.to_file(path, mode: 'w')
+      end
+      path
+    end
+
+    def self.load path
+      data = Hash.new
+      if path.end_with?('.yaml') || path.end_with?('.yml')
+        data = YAML.load_file(path)
+      elsif path.end_with?('.json')
+        data = JSON.parse(File.read(path))
+      else
+        raise "Failed to load task from '#{path}'. Invalid file type. Must be yaml or json."
+      end
+      data.keys_to_sym!
+      if data.include?(:class)
+        task = Object.const_get(data.delete(:class)).new(**data)
+      else
+        p data
+        task = Task.new(**data)
+      end
+      return task
     end
 
     STATES = {
@@ -203,10 +219,36 @@ class TaskVault
 
     protected
 
-      def init
+      def init_thread
+        run
+      end
+
+      def setup_defaults
         @times = {queued:nil, added:nil, started:nil, finished:nil, last_elevated:nil, created:nil}
         @run_count, @value, @thread = 0, nil, nil
         @dependencies = {}
+        @dargs = []
+        self.type = :proc
+        self.id = nil
+        self.name = SecureRandom.hex(10)
+        self.job = nil
+        self.interpreter = nil
+        self.working_dir = nil
+        self.args = nil
+        self.weight = 1
+        self.priority = 3
+        self.status = :created
+        self.max_life = nil
+        self.value_cap = 1000
+        self.delay = 0
+        self.repeat = 1
+        self.message_handlers = :default
+      end
+
+      def process_args *args, **named
+        # Handle arumgents passed in to initialize
+        if named.include?(:dependencies) then named[:dependencies].each{ |k, v| add_dependency(k, type: v)}; named.delete(:dependencies) end
+        super(*args, **named)
       end
 
       def build_proc
@@ -232,21 +274,15 @@ class TaskVault
       end
 
       def cmd_proc cmd
-        proc{ |*args, mh:nil, value_cap:nil|
+        proc{ |*args|
           results = []
           process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
           while !process.eof?
             line = process.readline
-            if defined?(mh) && mh.is_a?(Array)
-              mh.each do |h|
-                h.push line if h.is_a?(MessageHandler)
-              end
-            else
-              puts "Message handler FAIL"
-            end
+            queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
             results.push line
-            if value_cap
-              results.shift until results.size <= value_cap
+            if @value_cap
+              results.shift until results.size <= @value_cap
             end
           end
           process.close
