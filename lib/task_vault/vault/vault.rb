@@ -3,14 +3,22 @@ require_relative 'task_queue'
 class TaskVault
 
   class Vault < Component
-    attr_reader :queue, :limit, :last_id, :elevation_policy, :interval
+    attr_reader :queue, :limit, :elevation_policy, :interval, :path
 
     def limit= l
       @limit = l.nil? ? nil : BBLib::keep_between(l, 0, nil)
     end
 
+    def path= p
+      @path = p.to_s.gsub('\\', '/')
+    end
+
     def interval= i
       @interval = i.nil? ? nil : BBLib.keep_between(i, 0, nil)
+    end
+
+    def queue task
+      @queue.queue task
     end
 
     def method_missing *args, **named
@@ -21,7 +29,7 @@ class TaskVault
           @queue.send(args.first, *args[1..-1], **named)
         end
       else
-        raise ArgumentError, "Missing method for '#{args.first}' in #{self.class}"
+        raise NoMethodError, "Missing method for '#{args.first}' in #{self.class}"
       end
     end
 
@@ -30,7 +38,7 @@ class TaskVault
       def setup_defaults
         @queue = TaskQueue.new
         @elevation_policy = { 0 => nil, 1 => 60, 2 => 30, 3 => 30, 4 => 60, 5 => 120, 6 => nil }
-        @last_id, @interval, @limit = 0, 0.2, 5
+        @interval, @limit = 0.2, 5
       end
 
       def init_thread
