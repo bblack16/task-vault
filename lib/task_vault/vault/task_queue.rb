@@ -1,10 +1,11 @@
 class TaskVault
 
   class TaskQueue
-    attr_reader :tasks, :retention
+    attr_reader :tasks, :retention, :last_id
     include BBLib
 
-    def initialize retention: nil
+    def initialize retention: nil, starting_id:-1
+      @last_id = starting_id
       @tasks = {
         queued: [],
         ready: [],
@@ -18,9 +19,14 @@ class TaskVault
       @retention = r.nil? ? nil : BBLib::keep_between(r, 0, nil)
     end
 
+    def next_id
+      @last_id+=1
+    end
+
     def queue task
       raise ArgumentError, "Invalid type passed to TaskQueue. Got a '#{task.class}', expected a TaskVault::Task." unless task.is_a?(Task)
       task.status = :queued
+      task.id = next_id
       @tasks[:queued].push task
     end
 
