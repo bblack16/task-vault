@@ -10,7 +10,7 @@ class TaskVault
     end
 
     def path= p
-      @path = p.to_s + 'workbench.cfg'
+      @path = p.to_s
     end
 
     def add_task task, name:nil, interpreter:nil, working_dir:nil, start_at:nil, type: :script, args:nil, weight:1, priority:3, max_life:nil, value_cap:10000, repeat:1, delay:nil, message_handler_name: :default
@@ -37,16 +37,16 @@ class TaskVault
       end
       @dynamic_tasks.each{ |n, d| hash['dynamic_tasks'][n] = d.serialize }
       if format == :yaml
-        hash.to_yaml.to_file(@path, mode:'w')
+        hash.to_yaml.to_file(@path + 'workbench.cfg', mode:'w')
       else
-        hash.to_json.to_file(@path, mode:'w')
+        hash.to_json.to_file(@path + 'workbench.cfg', mode:'w')
       end
       true
     end
 
     def load_cfg
-      raise "Invalid path for Docket: #{@path}" unless File.exists?(@path) || (File.write(@path, '') && save)
-      raw = File.read(@path).to_s
+      raise "Invalid path for Docket: #{@path + 'workbench.cfg'}" unless File.exists?(@path + 'workbench.cfg') || (File.write(@path + 'workbench.cfg', '') && save)
+      raw = File.read(@path + 'workbench.cfg').to_s
       if raw.strip.start_with?('{')
         cfg = JSON.parse(raw)
       else
@@ -64,6 +64,13 @@ class TaskVault
         begin
           add_task( Object.const_get(v.delete(:class)).new(v) )
         rescue
+        end
+      end
+      BBLib.scan_files(@path + 'workorders/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).each do |file|
+        begin
+          add_task Task.load(file)
+        rescue StandardError, Exception => e
+          queue_msg("WARN - Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}")
         end
       end
       self.interval = cfg[:interval]
