@@ -15,13 +15,18 @@ class TaskVault
     @courier = Courier.new(self)
     @overworld = Overworld.new(self)
     @protectron = Protectron.new self
+    self.path = path
     self.start if start
   end
 
   def path= path
-    @path = path.to_s
+    path = path.to_s.gsub('\\', '/')
+    path = path[0..-2] if path.end_with?('/')
+    path = path + '/taskvault/' unless path.end_with?('/taskvault')
+    @path = path
     @vault.path = @path
     @workbench.path = @path
+    @courier.path = @path + '/message_handlers/'
   end
 
   def start
