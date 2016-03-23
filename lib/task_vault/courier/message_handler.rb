@@ -3,7 +3,7 @@
 class TaskVault
 
   class MessageHandler < Component
-    attr_reader :thread, :name, :started, :interval
+    attr_reader :thread, :name, :started, :interval, :serialize_fields
 
     def name= name
       @name = name.to_s.to_clean_sym
@@ -35,6 +35,43 @@ class TaskVault
       puts "#{msg[:time].strftime('%Y-%m-%d %H:%M:%S.%L')} - #{msg[:msg]}#{msg[:msg].is_a?(Exception) ? ': ' + msg[:msg].backtrace.join : ''}"
     end
 
+    def serialize
+      hash = Hash.new
+      @serialize_fields.each do |f|
+        hash[f] = self.send(f)
+      end
+      hash[:class] = self.class.to_s
+      hash
+    end
+
+    def save path = Dir.pwd, format = :yaml
+      path = path.gsub('\\', '/')
+      path = (!path.end_with?('/') ? path + '/' : '') + @name.to_s + '.' + format.to_s
+      case format
+      when :yaml
+        serialize.to_yaml.to_file(path, mode: 'w')
+      when :json
+        serialize.to_json.to_file(path, mode: 'w')
+      when :xml # Currenlty XML cannot be reserialized from
+        serialize.to_xml.to_file(path, mode: 'w')
+      end
+      path
+    end
+
+    def self.load path
+      data = Hash.new
+      if path.end_with?('.yaml') || path.end_with?('.yml')
+        data = YAML.load_file(path)
+      elsif path.end_with?('.json')
+        data = JSON.parse(File.read(path))
+      else
+        raise "Failed to load message handler (#{@name}). Invalid file type. Must be yaml or json."
+      end
+      data.keys_to_sym
+      messager = Object.const_get(data.delete(:class)).new(**data)
+      return messager
+    end
+
     protected
 
       def init_thread
@@ -42,9 +79,7 @@ class TaskVault
           begin
             loop do
               start = Time.now.to_f
-
               process_message while @queue.size > 0
-
               sleep_time = @interval - (Time.now.to_f - start)
               sleep(sleep_time < 0 ? 0 : sleep_time)
             end
@@ -59,6 +94,11 @@ class TaskVault
         @queue = []
         self.name = :default
         self.interval = 0.5
+        setup_serialize_fields
+      end
+
+      def setup_serialize_fields
+        @serialize_fields = [:name, :interval]
       end
 
   end
