@@ -59,9 +59,12 @@ class TaskVault
 
       def process_args *args, **named
         # Handle arumgents passed in to initialize
-
         named.each do |k,v|
-          send(k,v)
+          if respond_to?("#{k}=".to_sym)
+            send("#{k}=".to_sym, v)
+          else
+            queue_msg("WARN - Unknown parameter passed to #{self.class}: #{k}. Ignoring...")
+          end
         end
       end
 
