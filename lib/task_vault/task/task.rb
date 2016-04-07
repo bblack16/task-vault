@@ -3,7 +3,6 @@ require 'securerandom'
 class TaskVault
 
   class Task < Component
-    include BBLib
     attr_reader :id, :name, :type, :working_dir, :interpreter,
                 :job, :args, :weight, :priority, :message_handlers,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
@@ -38,7 +37,7 @@ class TaskVault
     end
 
     def type= t
-      @type = TYPES.include?(t) ? t : nil
+      @type = TYPES.include?(t.to_sym) ? t.to_sym : nil
     end
 
     def id= i
@@ -62,7 +61,7 @@ class TaskVault
     end
 
     def value
-      if @thread then @thread.value else nil end
+      if @thread && !@thread.alive? then @thread.value else nil end
     end
 
     def args= a
@@ -291,7 +290,7 @@ class TaskVault
       end
 
       def eval_proc eval
-        proc{ |*args, mh:nil, value_cap:nil|
+        proc{ |*args|
           begin
             eval(eval)
           rescue StandardError, Exception => e
@@ -303,8 +302,8 @@ class TaskVault
       def calc_start_time
         dtime = Time.now + @delay
         self.start_at = dtime unless @repeat
-        if @repeat.is_a?(String) && Cron.valid?(@repeat)
-          self.start_at = Cron.next(@repeat, time:dtime)
+        if @repeat.is_a?(String) && BBLib::Cron.valid?(@repeat)
+          self.start_at = BBLib::Cron.next(@repeat, time:dtime)
         else
           self.start_at = dtime
         end
