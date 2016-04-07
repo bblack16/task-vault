@@ -5,7 +5,7 @@ class TaskVault
   class Courier < Component
     attr_reader :handlers, :interval, :path, :load_interval
 
-    # 0 is HIGHLY not recommended as it is massive overkill for message processing in most cases
+    # 0 is HIGHLY not recommended as it is massive overkill for message processing in most use cases
     def interval= i
       @interval = BBLib.keep_between(i, 0, nil)
     end
@@ -29,6 +29,8 @@ class TaskVault
     end
 
     def add_handler mh, overwrite = true
+      # TODO Implement something to achieve the below line
+      # mh = MessageHandler.new(**mh) if mh.is_a?(Hash)
       if @handlers.any?{ |a| a.name == mh.name }
         match = @handlers.find{ |h| h.name == mh.name }
         if overwrite && match.serialize != mh.serialize
@@ -59,6 +61,10 @@ class TaskVault
       end
     end
 
+    def handler_list
+      @handlers.map{ |h| h.name }
+    end
+
     protected
 
       def init_thread
@@ -74,7 +80,13 @@ class TaskVault
               end
 
               if @parent.is_a?(TaskVault)
-                objects = [@parent.vault, @parent.protectron, @parent.workbench, @parent.overworld, self]
+                objects = [
+                            @parent.vault,
+                            @parent.protectron,
+                            @parent.workbench,
+                            @parent.sentry,
+                            self
+                          ]
                 @parent.vault.tasks.each{ |t| objects << t }
                 objects.each do |obj|
                   while obj.has_msg?
