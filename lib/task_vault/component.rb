@@ -2,7 +2,7 @@ class TaskVault
 
   # This is meant to be an abstract class that all the various TaskVault components inherit from to get boilerplate code out of the way
   class Component
-    attr_reader :message_queue, :parent, :thread
+    attr_reader :message_queue, :parent, :thread, :started, :stopped
 
     def initialize parent = nil, *args, **named
       self.parent = parent
@@ -15,15 +15,27 @@ class TaskVault
 
     def start
       init_thread unless running?
+      @started = Time.now
+      queue_msg("DEBUG - Starting #{self.class}")
+      running?
     end
 
     def stop
+      queue_msg("DEBUG - Stopping #{self.class}")
+      @stopped = Time.now
       @thread.kill if @thread
+      sleep(0.3) # Need to wait for shutdown of thread before running is called. This is a possible race condition.
+      !running?
     end
 
     def restart
+      queue_msg("DEBUG - Restarting #{self.class}")
       stop
       start
+    end
+
+    def uptime
+      running? ? Time.now - @started : 0
     end
 
     def running?
@@ -46,6 +58,16 @@ class TaskVault
     def parent= p
       @parent = p if p.is_a?(TaskVault)
     end
+
+    # Should no longer be needed..leaving for now to be determined/deleted later
+    # def set var, setting
+    #   cmd = "#{var}=".to_sym
+    #   if self.respond_to?(cmd)
+    #     send(cmd, setting)
+    #   else
+    #     raise ArgumentError, "No setter method is availabe for '#{var}' on '#{self.class}'"
+    #   end
+    # end
 
     protected
 
