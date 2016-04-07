@@ -32,7 +32,7 @@ class TaskVault
       # Reimpliment this is child classes. This is what reads from the queue and decides what to do with messages
       # In this parent class messages are simply printed to STDOUT usings puts
       msg = read_msg
-      puts "#{msg[:time].strftime('%Y-%m-%d %H:%M:%S.%L')} - #{msg[:msg]}#{msg[:msg].is_a?(Exception) ? ': ' + msg[:msg].backtrace.join : ''}"
+      puts "#{msg[:time].strftime('%Y-%m-%d %H:%M:%S.%L') rescue Time.now} - #{msg[:msg]}#{msg[:msg].is_a?(Exception) ? ': ' + msg[:msg].backtrace.join : ''}"
     end
 
     def serialize
