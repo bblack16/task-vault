@@ -2,7 +2,6 @@ class TaskVault
 
   class TaskQueue
     attr_reader :tasks, :retention, :last_id
-    include BBLib
 
     def initialize retention: nil, starting_id:-1
       @last_id = starting_id
@@ -24,23 +23,20 @@ class TaskVault
     end
 
     def queue task
+      task = Task.new(**task) if task.is_a?(Hash)
       raise ArgumentError, "Invalid type passed to TaskQueue. Got a '#{task.class}', expected a TaskVault::Task." unless task.is_a?(Task)
       task.status = :queued
       task.id = next_id
       @tasks[:queued].push task
+      {id: task.id, name: task.name, start_time:task.start_at}
     end
 
     def cancel task
-      retrieve(task).each do |t|
+      retrieve(task).map do |t|
         t.cancel
         move_task(t, :canceled)
-      end
-    end
-
-    def sort
-      @tasks[:queued].sort_by!{ |t| [t.priority, t.queued] }
-      @tasks[:ready].sort_by!{ |t| [t.priority, t.added] }
-      nil
+        [t.name, t.status]
+      end.to_h
     end
 
     # Cancels all jobs and clears all completed tasks
@@ -60,19 +56,6 @@ class TaskVault
       nil
     end
 
-    def move_task task, status
-      raise "Invalid status. Cannot move task to '#{status}'." unless STATUSES.include?(status)
-      move_to = @tasks[STATUSES[status]]
-      tasks = retrieve(task)
-      @tasks.map{|k,v| v}.each do |q|
-        tasks.each do |t|
-          if q.include?(t)
-            move_to.push(q.delete(t))
-            t.status = status
-          end
-        end
-      end
-    end
 
     def tasks
       @tasks.map{|k,v| v}.flatten
@@ -82,7 +65,7 @@ class TaskVault
       attributes = [:name, :status] if attributes.empty?
       tasks.map do |t|
         attr = Hash.new
-        attributes.each{ |a| attr[a] = t.send(a) }
+        attributes.each{ |a| attr[a.to_sym] = t.send(a.to_sym) if t.respond_to?(a.to_sym) }
         [t.id, attr]
       end.to_h
     end
@@ -103,6 +86,40 @@ class TaskVault
 
     def value_of id, name: false
       retrieve(id).map{ |t| [(name ? t.name : t.id), t.value] }.to_h
+    end
+
+    STATUSES = {
+      queued: :queued,
+      ready: :ready,
+      running: :running,
+      finished: :done,
+      error: :done,
+      waiting: :queued,
+      failed_dependency: :done,
+      missing_dependency: :queued,
+      timeout: :done,
+      canceled: :done,
+      unknown: :done
+    }
+
+    def sort
+      @tasks[:queued].sort_by!{ |t| [t.priority, t.queued] }
+      @tasks[:ready].sort_by!{ |t| [t.priority, t.added] }
+      nil
+    end
+
+    def move_task task, status
+      raise "Invalid status. Cannot move task to '#{status}'." unless STATUSES.include?(status)
+      move_to = @tasks[STATUSES[status]]
+      tasks = retrieve(task)
+      @tasks.map{|k,v| v}.each do |q|
+        tasks.each do |t|
+          if q.include?(t)
+            move_to.push(q.delete(t))
+            t.status = status
+          end
+        end
+      end
     end
 
     def ready_up
@@ -203,8 +220,8 @@ class TaskVault
           task.start_at = Time.now + task.repeat.parse_duration(output: :sec)
         elsif task.repeat.start_with?('every:')
           task.start_at = Time.at(task.started + task.repeat.parse_duration(output: :sec))
-        elsif Cron.valid?(task.repeat) # For cron syntax
-          task.start_at = Cron.next(task.repeat)
+        elsif BBLib::Cron.valid?(task.repeat) # For cron syntax
+          task.start_at = BBLib::Cron.next(task.repeat)
         elsif task.repeat == 'from_value'
           val = task.value.to_a.last
           if val.is_a?(Exception) || val == 'stop' || val == 'false'
@@ -213,8 +230,8 @@ class TaskVault
             begin
               if val.strip =~ /\A\d+\z/ || val.strip =~ /\A\d+\.\d+\z/
                 task.start_at = Time.now + val.to_s.to_f
-              elsif Cron.valid?(val)
-                task.start_at = Cron.next(val)
+              elsif BBLib::Cron.valid?(val)
+                task.start_at = BBLib::Cron.next(val)
               else
                 task.start_at = Time.parse(val)
               end
@@ -233,19 +250,6 @@ class TaskVault
       repeat
     end
 
-    STATUSES = {
-      queued: :queued,
-      ready: :ready,
-      running: :running,
-      finished: :done,
-      error: :done,
-      waiting: :queued,
-      failed_dependency: :done,
-      missing_dependency: :queued,
-      timeout: :done,
-      canceled: :done,
-      unknown: :done
-    }
 
   end
 
