@@ -2,7 +2,7 @@
 
 module TaskVault
 
-  class DynamicTask
+  class DynamicTask < BaseTask
     attr_reader :name
 
     def initialize name
