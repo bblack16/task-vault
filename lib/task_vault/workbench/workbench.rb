@@ -22,6 +22,10 @@ class TaskVault
       end
     end
 
+    def save_script name, script
+      script.to_file(@path + 'scripts/' + name.to_s, mode: 'w')
+    end
+
     def remove_task name
       @tasks.delete name
     end
@@ -79,7 +83,7 @@ class TaskVault
 
               # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
               @tasks.each do |name, task|
-                (task.is_a?(DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
+                (task.is_a?(TaskVault::DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
                   n = t.name
                   task_set.push(n)
                   if @active.include?(n) && @active[n] != t.serialize
