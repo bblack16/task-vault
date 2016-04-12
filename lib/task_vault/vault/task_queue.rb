@@ -1,10 +1,11 @@
 class TaskVault
 
   class TaskQueue
-    attr_reader :tasks, :retention, :last_id
+    attr_reader :tasks, :retention, :last_id, :interpreters
 
     def initialize retention: nil, starting_id:-1
       @last_id = starting_id
+      @interpreters = {ruby: Gem.ruby}
       @tasks = {
         queued: [],
         ready: [],
@@ -56,7 +57,6 @@ class TaskVault
       nil
     end
 
-
     def tasks
       @tasks.map{|k,v| v}.flatten
     end
@@ -88,6 +88,14 @@ class TaskVault
       retrieve(id).map{ |t| [(name ? t.name : t.id), t.value] }.to_h
     end
 
+    def add_interpreter name, path, *file_types
+      @interpreters[name.to_sym] = {path:path, file_types: file_types}
+    end
+
+    def remove_interpreter name
+      @interpreters.delete name.to_sym
+    end
+
     STATUSES = {
       queued: :queued,
       ready: :ready,
@@ -101,6 +109,13 @@ class TaskVault
       canceled: :done,
       unknown: :done
     }
+
+    def get_interpreter inter, script = nil
+      return nil if inter.nil? && script.nil?
+      return @interpreters[inter][:path] if @interpreters.include?(inter)
+      ft = (script.to_s.file_name.chars - scrip.to_s.file_name(false).chars).join
+      return @interpreters.find{|k,v| v[:file_types].include?(ft)}
+    end
 
     def sort
       @tasks[:queued].sort_by!{ |t| [t.priority, t.queued] }
@@ -170,7 +185,7 @@ class TaskVault
       msgs, weight = [], running_weight
       @tasks[:ready].each do |t|
         if limit.nil? || t.weight + weight <= limit || t.priority == 0
-          if t.run
+          if t.run get_interpreter(t.interpreter, t.job)
             move_task(t, :running)
             msgs.push "INFO - Task '#{t.name} (ID: #{t.id})' has started!"
             weight+= t.weight
