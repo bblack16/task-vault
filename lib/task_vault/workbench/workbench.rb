@@ -2,7 +2,7 @@
 class TaskVault
 
   class Workbench < Component
-    attr_reader :path, :tasks, :dynamic_tasks, :active, :interval
+    attr_reader :path, :tasks, :active, :interval
 
     # 0 is HIGHLY not recommended as it is massive overkill for message processing in most cases
     def interval= i
@@ -13,15 +13,11 @@ class TaskVault
       @path = p.to_s
     end
 
-    def add_task task, name:nil, interpreter:nil, working_dir:nil, start_at:nil, type: :script, args:nil, weight:1, priority:3, max_life:nil, value_cap:10000, repeat:1, delay:nil, message_handler_name: :default
-      if !task.is_a?(Task) && !task.is_a?(Array) && !task.is_a?(DynamicTask)
-        task = Task.new(name:name, interpreter:interpreter, working_dir:working_dir, type:type, job:task, args:args, weight:weight, priority:priority, max_life:max_life, value_cap:value_cap, repeat:repeat, delay:delay, message_handler_name:message_handler_name)
-      end
+    def add_task task
+      task = BaseTask.load(task) if task.is_a?(Hash) || task.is_a?(String)
       [task].flatten.each do |t|
-        if t.is_a?(Task)
+        if t.is_a?(BaseTask)
           @tasks[t.name] = t
-        elsif t.is_a?(DynamicTask)
-          @dynamic_tasks[t.name] = t
         end
       end
     end
@@ -30,50 +26,34 @@ class TaskVault
       @tasks.delete name
     end
 
-    def save overwrite = true, format: :yaml
-      hash = {'interval' => @interval, 'tasks' => {}, 'dynamic_tasks' => {}}
+    def delete_task name
+      remove_task name
+      path = @path + "recipes/#{name}"
+      path+= (File.exists?(path + '.yml') ? '.yml' : (File.exists?(path + '.json') ? 'json' : nil))
+      File.delete(path)
+    end
+
+    def save default_format = :yaml
       @tasks.each do |n, t|
-        hash['tasks'][n.to_s] = t.serialize
-      end
-      @dynamic_tasks.each{ |n, d| hash['dynamic_tasks'][n] = d.serialize }
-      if format == :yaml
-        hash.to_yaml.to_file(@path + 'workbench.cfg', mode:'w')
-      else
-        hash.to_json.to_file(@path + 'workbench.cfg', mode:'w')
+        path = @path + "recipes/#{t.name}"
+        format = (File.exists?(path + '.yml') ? :yaml : (File.exists?(path + '.json') ? :json : default_format))
+        if format == :yaml
+          t.serialize.to_yaml.to_file(path + ".yml", mode:'w')
+        else
+          t.serialize.to_file(path + ".json", mode:'w')
+        end
       end
       true
     end
 
     def load_cfg
-      raise "Invalid path for Docket: #{@path + 'workbench.cfg'}" unless File.exists?(@path + 'workbench.cfg') || (File.write(@path + 'workbench.cfg', '') && save)
-      raw = File.read(@path + 'workbench.cfg').to_s
-      if raw.strip.start_with?('{')
-        cfg = JSON.parse(raw)
-      else
-        cfg = YAML.load(raw)
-      end
-      return cfg unless Hash === cfg
-      cfg.keys_to_sym!
-      cfg[:tasks].each do |k, v|
-        begin
-          add_task Task.new(v)
-        rescue
-        end
-      end
-      cfg[:dynamic_tasks].each do |k, v|
-        begin
-          add_task( Object.const_get(v.delete(:class)).new(v) )
-        rescue
-        end
-      end
-      BBLib.scan_files(@path + 'workorders/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).each do |file|
+      BBLib.scan_files(@path + 'recipes/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).each do |file|
         begin
           add_task Task.load(file)
         rescue StandardError, Exception => e
           queue_msg("WARN - Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}")
         end
       end
-      self.interval = cfg[:interval]
       true
     end
 
@@ -98,23 +78,8 @@ class TaskVault
               task_set = []
 
               # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
-              @tasks.each do |n, t|
-                task_set.push(n)
-                if @active.include?(n) && @active[n] != t.serialize
-                  @parent.vault.cancel(n)
-                  @parent.vault.queue t
-                  @active[n] = t.serialize
-                  counts[:updated]+=1
-                elsif @active[n].nil?
-                  @parent.vault.queue t
-                  @active[n] = t.serialize
-                  counts[:new]+=1
-                end
-              end
-
-              # Load dynamic tasks to see if there are any new tasks to start or any that have changed.
-              @dynamic_tasks.each do |name, d|
-                d.generate_tasks.each do |t|
+              @tasks.each do |name, task|
+                (task.is_a?(DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
                   n = t.name
                   task_set.push(n)
                   if @active.include?(n) && @active[n] != t.serialize
