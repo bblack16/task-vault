@@ -1,4 +1,5 @@
 require_relative "component"
+require_relative "task/base_task"
 require_relative "task/task"
 require_relative "vault/vault"
 require_relative "workbench/workbench"
@@ -43,6 +44,7 @@ class TaskVault
     # @sentry.stop # For now this won't get stopped because it is essential for communication
     @workbench.stop
     @vault.stop
+    sleep(1) # Hack to let courier keep processing. This will be replaced with something better.
     @courier.stop
     !running?
   end
