@@ -5,7 +5,8 @@ class TaskVault
 
     def initialize retention: nil, starting_id:-1
       @last_id = starting_id
-      @interpreters = {ruby: Gem.ruby}
+      @interpreters = {}
+      add_interpreter :ruby, Gem.ruby, '.rb'
       @tasks = {
         queued: [],
         ready: [],
@@ -113,7 +114,7 @@ class TaskVault
     def get_interpreter inter, script = nil
       return nil if inter.nil? && script.nil?
       return @interpreters[inter][:path] if @interpreters.include?(inter)
-      ft = (script.to_s.file_name.chars - scrip.to_s.file_name(false).chars).join
+      ft = (script.to_s.file_name.chars - script.to_s.file_name(false).chars).join
       return @interpreters.find{|k,v| v[:file_types].include?(ft)}
     end
 

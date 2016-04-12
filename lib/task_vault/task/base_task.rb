@@ -21,7 +21,6 @@ class TaskVault
         if data.include?(:class)
           task = Object.const_get(data.delete(:class)).new(**data)
         else
-          p data
           task = Task.new(**data)
         end
         raise "Failed to load task, invalid type '#{task.class}' is not inherited from TaskVault::BaseTask" unless task.is_a?(BaseTask)

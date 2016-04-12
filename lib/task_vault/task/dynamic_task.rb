@@ -1,6 +1,6 @@
 
 
-module TaskVault
+class TaskVault
 
   class DynamicTask < BaseTask
     attr_reader :name

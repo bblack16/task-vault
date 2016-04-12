@@ -1,6 +1,7 @@
 require_relative "component"
 require_relative "task/base_task"
 require_relative "task/task"
+require_relative "task/dynamic_task"
 require_relative "vault/vault"
 require_relative "workbench/workbench"
 require_relative "protectron/protectron"
