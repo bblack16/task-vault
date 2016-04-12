@@ -179,7 +179,7 @@ class TaskVault
     end
 
     def running_weight
-      @tasks[:running].inject{ |sum, x| sum + x.weight }.to_f
+      @tasks[:running].map{ |t| t.weight }.inject{ |sum, x| sum + x.to_f }.to_f
     end
 
     def run_tasks limit

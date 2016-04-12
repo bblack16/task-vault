@@ -10,10 +10,12 @@ class TaskVault
     end
 
     def start
+      @started = Time.now
       @controller.start
     end
 
     def stop
+      @stopped = Time.now
       @controller.stop
     end
 

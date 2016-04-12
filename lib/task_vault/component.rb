@@ -35,6 +35,7 @@ class TaskVault
     end
 
     def uptime
+      return 0 if @started.nil?
       running? ? Time.now - @started : 0
     end
 
