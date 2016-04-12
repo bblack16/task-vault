@@ -2,7 +2,7 @@ require 'securerandom'
 
 class TaskVault
 
-  class Task < Component
+  class Task < BaseTask
     attr_reader :id, :name, :type, :working_dir, :interpreter,
                 :job, :args, :weight, :priority, :message_handlers,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
@@ -10,11 +10,11 @@ class TaskVault
                 :initial_priority, :run_count, :status
 
     TYPES = [
-      :proc, :cmd, :script, :ruby, :eval, :eval_proc
+      :proc, :cmd, :script, :ruby, :eval  #, :eval_proc
     ]
 
-    def run
-      pr = build_proc
+    def run interpreter_path = @interpreter
+      pr = build_proc interpreter_path
       if pr
         self.set_time :started, Time.now
         self.status = :running
@@ -49,7 +49,7 @@ class TaskVault
     end
 
     def interpreter= i
-      @interpreter = i.nil? ? nil : (File.exists?(i) ? i : nil)
+      @interpreter = i
     end
 
     def working_dir= w
@@ -157,7 +157,7 @@ class TaskVault
       if @times.include?(args)
         return @times[args]
       else
-        raise NoMethodError, "Method missing for #{args} on #{self.class}."
+        super(args)
       end
     end
 
@@ -182,23 +182,8 @@ class TaskVault
       path
     end
 
-    def self.load path
-      data = Hash.new
-      if path.end_with?('.yaml') || path.end_with?('.yml')
-        data = YAML.load_file(path)
-      elsif path.end_with?('.json')
-        data = JSON.parse(File.read(path))
-      else
-        raise "Failed to load task from '#{path}'. Invalid file type. Must be yaml or json."
-      end
-      data.keys_to_sym!
-      if data.include?(:class)
-        task = Object.const_get(data.delete(:class)).new(**data)
-      else
-        p data
-        task = Task.new(**data)
-      end
-      return task
+    def started
+      method_missing(:started)
     end
 
     STATES = {
@@ -250,7 +235,7 @@ class TaskVault
         super(*args, **named)
       end
 
-      def build_proc
+      def build_proc interpreter_path
         @proc = nil
         case @type
         when :proc
@@ -258,16 +243,16 @@ class TaskVault
         when :cmd
           @proc = cmd_proc(@job)
         when :script
-          @proc = cmd_proc("#{@interpreter} #{@job}")
+          @proc = cmd_proc("#{interpreter_path} #{@job}")
         when :ruby
           @proc = cmd_proc("#{Gem.ruby} #{@job}")
         when :eval
           @proc = eval_proc(@job)
-        when :eval_proc
-          ev = eval(@job)
-          if ev.is_a?(Proc)
-            @proc = ev
-          end
+        # when :eval_proc
+        #   ev = eval(@job)
+        #   if ev.is_a?(Proc)
+        #     @proc = ev
+        #   end
         end
         @proc
       end
@@ -291,11 +276,18 @@ class TaskVault
 
       def eval_proc eval
         proc{ |*args|
-          begin
-            eval(eval)
-          rescue StandardError, Exception => e
-            e
+          results = []
+          process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"")
+          while !process.eof?
+            line = process.readline
+            queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
+            results.push line
+            if @value_cap
+              results.shift until results.size <= @value_cap
+            end
           end
+          process.close
+          results
         }
       end
 
