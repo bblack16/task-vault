@@ -6,11 +6,11 @@ class TaskVault
     attr_reader :id, :name, :type, :working_dir, :interpreter,
                 :job, :args, :weight, :priority, :message_handlers,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
-                :couriers, :thread, :dependencies, :events,
+                :couriers, :dependencies, :events, :run_limit,
                 :initial_priority, :run_count, :status
 
     TYPES = [
-      :proc, :cmd, :script, :ruby, :eval  #, :eval_proc
+      :proc, :cmd, :script, :eval  #, :eval_proc
     ]
 
     def run interpreter_path = @interpreter
@@ -56,34 +56,25 @@ class TaskVault
       @working_dir = w.nil? ? nil : (Dir.exists?(w) ? w : nil)
     end
 
-    def thread= t
-      @thread = t
-    end
-
     def value
-      if @thread && !@thread.alive? then @thread.value else nil end
+      if @thread && !@thread.alive? 
+        @thread.value
+      else
+        nil
+      end
     end
 
     def args= a
       @args = a.nil? ? [] : [a].flatten(1)
     end
 
-    def args
-      # if defined?(@proc) && @proc.parameters.map{ |t, v| v }.include?(:mh)
-      #   @args + @dargs + [{mh: @message_handler, value_cap: @value_cap}]
-      # else
-      #
-      # end
-      @args + @dargs
-    end
-
     def weight= w
       @weight = BBLib::keep_between(w.to_i, 0, nil)
     end
 
-    def priority= n, init = true
+    def priority= n
       @priority = BBLib::keep_between(n.to_i, 0, 6)
-      @initial_priority = @priority if init
+      @initial_priority = @priority
     end
 
     def elevate
@@ -140,7 +131,7 @@ class TaskVault
       @message_handlers = [mh].flatten
     end
 
-    def add_dependency name, type: :wait
+    def add_dependency dependency
       @dependencies[name] = Overseer::DEPEND_TYPES.include?(type) ? type : :wait
     end
 
@@ -211,7 +202,6 @@ class TaskVault
         @times = {queued:nil, added:nil, started:nil, finished:nil, last_elevated:nil, created:nil}
         @run_count, @value, @thread = 0, nil, nil
         @dependencies = {}
-        @dargs = []
         self.type = :proc
         self.id = nil
         self.name = SecureRandom.hex(10)
@@ -230,7 +220,7 @@ class TaskVault
       end
 
       def process_args *args, **named
-        # Handle arumgents passed in to initialize
+        # Handle arguments passed in to initialize
         if named.include?(:dependencies) then named[:dependencies].each{ |k, v| add_dependency(k, type: v)}; named.delete(:dependencies) end
         super(*args, **named)
       end
@@ -244,15 +234,8 @@ class TaskVault
           @proc = cmd_proc(@job)
         when :script
           @proc = cmd_proc("#{interpreter_path} #{@job}")
-        when :ruby
-          @proc = cmd_proc("#{Gem.ruby} #{@job}")
         when :eval
           @proc = eval_proc(@job)
-        # when :eval_proc
-        #   ev = eval(@job)
-        #   if ev.is_a?(Proc)
-        #     @proc = ev
-        #   end
         end
         @proc
       end
@@ -264,7 +247,7 @@ class TaskVault
           while !process.eof?
             line = process.readline
             queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
-            results.push line
+            results << line
             if @value_cap
               results.shift until results.size <= @value_cap
             end
@@ -281,7 +264,7 @@ class TaskVault
           while !process.eof?
             line = process.readline
             queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
-            results.push line
+            results << line
             if @value_cap
               results.shift until results.size <= @value_cap
             end
