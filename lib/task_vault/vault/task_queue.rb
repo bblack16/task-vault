@@ -213,7 +213,7 @@ class TaskVault
               move_task(task, :waiting)
               ready = false
             end
-          when :prereq, :value
+          when :prereq, :value, :prereq_value
             if deps.any?{ |d| [:timeout, :error, :canceled, :failed_dependency].include?(d.status) }
               ready = false
               move_task(task, :failed_dependency)
@@ -230,7 +230,7 @@ class TaskVault
     end
 
     def parse_repeat task
-      repeat = (task.repeat == true || task.repeat.is_a?(Numeric) && task.repeat.to_i > task.run_count || task.repeat.is_a?(Time) && Time.now < task.repeat || task.repeat.is_a?(String) )
+      repeat = (task.repeat == true && (task.run_limit.nil? || task.run_count < task.run_limit) || task.repeat.is_a?(Numeric) && task.repeat.to_i > task.run_count || task.repeat.is_a?(Time) && Time.now < task.repeat || task.repeat.is_a?(String) )
       if repeat && task.repeat.is_a?(String)
         if task.repeat.start_with?('after:')
           task.start_at = Time.now + task.repeat.parse_duration(output: :sec)
