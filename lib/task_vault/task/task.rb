@@ -6,7 +6,7 @@ class TaskVault
     attr_reader :id, :name, :type, :working_dir, :interpreter,
                 :job, :args, :weight, :priority, :message_handlers,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
-                :couriers, :dependencies, :events, :run_limit,
+                :dependencies, :events, :run_limit,
                 :initial_priority, :run_count, :status
 
     TYPES = [
@@ -57,7 +57,7 @@ class TaskVault
     end
 
     def value
-      if @thread && !@thread.alive? 
+      if @thread && !@thread.alive?
         @thread.value
       else
         nil
@@ -131,12 +131,24 @@ class TaskVault
       @message_handlers = [mh].flatten
     end
 
-    def add_dependency dependency
-      @dependencies[name] = Overseer::DEPEND_TYPES.include?(type) ? type : :wait
+    DEPENDENCY_TYPES = [
+      :wait, # Wait until the dependency has run at least once since the last time this task ran
+      :value, # Same as wait, but the value of the depency is passed in
+      :prereq, # Similar to wait, but it only runs this task if the previous task succeeded.
+      :prereq_value, # Same as prereq but also passed the value of the dependency.
+      :after, #
+      :on_finish, # Runs after the dependency has finished running with no repeats left.
+      :on_fail # Runs only if the dependency fails
+    ]
+
+    def add_dependency **dependencies
+      dependencies.each do |task, type|
+        @dependencies[task] = type if DEPENDENCY_TYPES.include?(type)
+      end
     end
 
-    def remove_dependency name
-      @dependencies.delete name
+    def remove_dependency task
+      @dependencies.delete task
     end
 
     def set_time type, time
@@ -243,7 +255,11 @@ class TaskVault
       def cmd_proc cmd
         proc{ |*args|
           results = []
-          process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
+          if @working_dir
+            process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }", chdir: @working_dir)
+          else
+            process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
+          end
           while !process.eof?
             line = process.readline
             queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
@@ -260,7 +276,11 @@ class TaskVault
       def eval_proc eval
         proc{ |*args|
           results = []
-          process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"")
+          if @working_dir
+            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"", chdir: @working_dir)
+          else
+            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"")
+          end
           while !process.eof?
             line = process.readline
             queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
