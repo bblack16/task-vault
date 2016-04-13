@@ -35,6 +35,14 @@ class TaskVault
       @controller.restart
     end
 
+    def method_missing *args, **named
+      if @controller.respond_to?(args.first)
+        @controller.send(args.first, *args[1..-1], **named)
+      else
+        super(*args, **named)
+      end
+    end
+
     protected
 
       def setup_defaults
