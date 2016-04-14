@@ -115,7 +115,8 @@ class TaskVault
       return nil if inter.nil? && script.nil?
       return @interpreters[inter][:path] if @interpreters.include?(inter)
       ft = (script.to_s.file_name.chars - script.to_s.file_name(false).chars).join
-      return @interpreters.find{|k,v| v[:file_types].include?(ft)}[1][:path]
+      interpreter = @interpreters.find{|k,v| v[:file_types].include?(ft)}
+      interpreter[1][:path] rescue nil
     end
 
     def sort
