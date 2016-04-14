@@ -33,7 +33,7 @@ class TaskVault
     def generate_tasks
       tasks = []
       BBLib.scan_files(@path, filter:@filter, recursive:@recursive).each do |script|
-        tasks.push Task.new(name:"#{@name}_#{script}", type: :script, job:script, working_dir:@working_dir, args:@args, weight:@weight, priority:@priority, max_life:@max_life, value_cap:@value_cap, repeat:@repeat, delay:@delay, message_handler_name:@message_handler_name)
+        tasks.push Task.new(name:"#{@name}_#{script}", type: :script, job:script, working_dir:@working_dir, args:@args, weight:@weight, priority:@priority, max_life:@max_life, value_cap:@value_cap, repeat:@repeat, delay:@delay, message_handlers:@message_handlers)
       end
       return tasks
     end
