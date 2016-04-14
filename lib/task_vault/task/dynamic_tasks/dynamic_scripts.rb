@@ -6,7 +6,7 @@ class TaskVault
     attr_accessor :working_dir, :args, :weight, :priority,
                   :max_life, :value_cap, :repeat, :delay, :message_handler_name
 
-    def initialize name:nil, path:nil, filter: '*', recursive: false, working_dir:nil, args:nil, weight:1, priority:3, max_life:nil, value_cap:1000000, repeat:1, delay:0, message_handler_name: :default
+    def initialize name:nil, path:Dir.pwd, filter: '*', recursive: false, working_dir:nil, args:nil, weight:1, priority:3, max_life:nil, value_cap:1000000, repeat:1, delay:0, message_handler_name: :default
       super(name)
       self.path = path
       self.filter = filter

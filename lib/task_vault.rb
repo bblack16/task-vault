@@ -8,7 +8,6 @@ require_relative "task_vault/task_vault"
 require_relative "pipboy/pipboy"
 
 
-
 class TaskVault
 
 end

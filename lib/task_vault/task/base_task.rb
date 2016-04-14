@@ -19,7 +19,7 @@ class TaskVault
         end
         data.keys_to_sym!
         if data.include?(:class)
-          task = Object.const_get(data.delete(:class)).new(**data)
+          task = Object.const_get(data.delete(:class).to_s).new(**data)
         else
           task = Task.new(**data)
         end
