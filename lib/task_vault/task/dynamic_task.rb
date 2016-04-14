@@ -24,3 +24,6 @@ class TaskVault
   end
 
 end
+
+
+require_relative 'dynamic_tasks/dynamic_scripts'

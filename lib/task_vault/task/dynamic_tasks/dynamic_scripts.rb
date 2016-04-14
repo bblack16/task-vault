@@ -1,4 +1,4 @@
-module TaskVault
+class TaskVault
 
   class DynamicScripts < DynamicTask
     attr_reader :path, :filter
