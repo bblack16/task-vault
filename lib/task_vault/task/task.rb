@@ -4,10 +4,10 @@ class TaskVault
 
   class Task < BaseTask
     attr_reader :id, :name, :type, :working_dir, :interpreter,
-                :job, :args, :weight, :priority, :message_handlers,
+                :job, :args, :weight, :priority,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
-                :dependencies, :events, :run_limit,
-                :initial_priority, :run_count, :status
+                :dependencies, :history, :history_limit, :run_limit,
+                :initial_priority, :run_count, :status, :dependency_args
 
     TYPES = [
       :proc, :cmd, :script, :eval  #, :eval_proc
@@ -22,11 +22,11 @@ class TaskVault
       end
       @thread = Thread.new {
         begin
-          pr.call(args)
+          add_history(pr.call(*args), status: :success)
         rescue StandardError, Exception => e
-          queue_msg("Task #{@name} failed. Error message follows")
-          queue_msg(e)
-          e
+          queue_msg("Task #{@name} failed. Error message follows", severity: 2)
+          queue_msg(e, severity: 2)
+          add_history(e, status: :failure)
         end
       }
       return @thread.alive?
@@ -64,8 +64,16 @@ class TaskVault
       end
     end
 
+    def args
+      @args + @dependency_args
+    end
+
     def args= a
-      @args = a.nil? ? [] : [a].flatten(1)
+      @args = (a.nil? ? [] : [a].flatten(1))
+    end
+
+    def dependency_args= a
+      @dependency_args = a.nil? ? [] : [a].flatten(1)
     end
 
     def weight= w
@@ -93,7 +101,7 @@ class TaskVault
         set_time :last_elevated, Time.now
       when :running
         set_time :started, Time.now
-      when :finished, :error, :failed_dependency, :canceled, :timeout
+      when :finished || :error || :canceled || :timeout
         set_time :finished, Time.now
         @thread.kill if @thread.alive?
       end
@@ -113,6 +121,10 @@ class TaskVault
       @value_cap = BBLib::keep_between(n.to_i, 1, 1000000)
     end
 
+    def history_limit= n
+      @history_limit = BBLib::keep_between(n.to_i, 1, nil)
+    end
+
     def repeat= r
       @repeat = r
       calc_start_time
@@ -127,22 +139,27 @@ class TaskVault
       @start_at = s.is_a?(Time) ? s : Time.now
     end
 
-    def message_handlers= mh
-      @message_handlers = [mh].flatten
-    end
-
     DEPENDENCY_TYPES = [
       :wait, # Wait until the dependency has run at least once since the last time this task ran
       :value, # Same as wait, but the value of the depency is passed in
       :prereq, # Similar to wait, but it only runs this task if the previous task succeeded.
       :prereq_value, # Same as prereq but also passed the value of the dependency.
-      :after, #
       :on_finish, # Runs after the dependency has finished running with no repeats left.
-      :on_fail # Runs only if the dependency fails
+      :on_finish_value,
+      :on_fail, # Runs only if the dependency fails
+      :on_fail_value,
+      :on_success, # Same as on_finish but only executes if the previous task is finished, with no errors.
+      :on_sucess_value
     ]
 
-    def add_dependency **dependencies
+    def add_dependency *args, **dependencies
+      dependencies.merge(args.last) if args.last.is_a?(Hash)
       dependencies.each do |task, type|
+        if task.to_s =~ /\A\d+\z/
+          task = task.to_s.to_i
+        else
+          task = task.to_s
+        end
         @dependencies[task] = type if DEPENDENCY_TYPES.include?(type)
       end
     end
@@ -166,7 +183,20 @@ class TaskVault
 
     def serialize
       values = BBLib.to_hash(self)
-      values.hash_path_delete 'initial_priority', 'dargs', 'times', 'thread', 'value', 'run_count', 'id', 'status', 'start_at', 'message_handler', 'proc'
+      values.hash_path_delete(
+        'initial_priority',
+        'dependency_args',
+        'times',
+        'thread',
+        'value',
+        'run_count',
+        'id',
+        'status',
+        'start_at',
+        'message_queue',
+        'proc',
+        'history'
+      )
       return values
     end
 
@@ -213,7 +243,7 @@ class TaskVault
       def setup_defaults
         @times = {queued:nil, added:nil, started:nil, finished:nil, last_elevated:nil, created:nil}
         @run_count, @value, @thread = 0, nil, nil
-        @dependencies = {}
+        @dependencies, @history, @dependency_args = {}, [], []
         self.type = :proc
         self.id = nil
         self.name = SecureRandom.hex(10)
@@ -229,12 +259,27 @@ class TaskVault
         self.delay = 0
         self.repeat = 1
         self.message_handlers = :default
+        self.history_limit = 10
       end
 
       def process_args *args, **named
         # Handle arguments passed in to initialize
-        if named.include?(:dependencies) then named[:dependencies].each{ |k, v| add_dependency(k, type: v)}; named.delete(:dependencies) end
+        if
+          named.include?(:dependencies)
+          named[:dependencies].each do |k, v|
+            add_dependency(k => v)
+          end
+          named.delete(:dependencies)
+        end
         super(*args, **named)
+      end
+
+      def add_history value, **other
+        @history.push({value: value, time: Time.now, run_count: @run_count}.merge(**other))
+        while @history.size > @history_limit
+          @history.shift
+        end
+        value
       end
 
       def build_proc interpreter_path
@@ -262,7 +307,7 @@ class TaskVault
           end
           while !process.eof?
             line = process.readline
-            queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
+            queue_msg(line, task_name: @name, task_id: @id, severity: 5)
             results << line
             if @value_cap
               results.shift until results.size <= @value_cap
@@ -277,13 +322,13 @@ class TaskVault
         proc{ |*args|
           results = []
           if @working_dir
-            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"", chdir: @working_dir)
+            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\" #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }", chdir: @working_dir)
           else
-            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\"")
+            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\" #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
           end
           while !process.eof?
             line = process.readline
-            queue_msg(line, *@message_handlers, task_name: @name, task_id: @id)
+            queue_msg(line, task_name: @name, task_id: @id, severity: 5)
             results << line
             if @value_cap
               results.shift until results.size <= @value_cap
