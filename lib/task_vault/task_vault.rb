@@ -59,6 +59,11 @@ class TaskVault
     running?
   end
 
+  def change_handlers *handlers
+    [@vault, @workbench, @courier, @sentry, @protectron].each{ |obj| obj.message_handlers = handlers }
+    true
+  end
+
   def running?
     @vault.running? && @workbench.running? && @courier.running? && @protectron.running? && @sentry.running?
   end
