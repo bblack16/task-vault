@@ -33,6 +33,10 @@ class TaskVault
       end
     end
 
+    def methods
+      (@queue.methods + super).uniq
+    end
+
     protected
 
       def setup_defaults
@@ -42,23 +46,22 @@ class TaskVault
       end
 
       def init_thread
-        # [:sort, :ready_up, [:elevate_tasks, @elevation_policy], :sort, :check_running, [:run_tasks, @limit], :clear].each do |method|
-        #   @queue.send(*method).to_a.each{ |m| queue_msg(m)}
-        # end
         @thread = Thread.new {
           begin
             loop do
               start = Time.now.to_f
 
               [:sort, :ready_up, [:elevate_tasks, @elevation_policy], :sort, :check_running, [:run_tasks, @limit], :clean].each do |method|
-                @queue.send(*method).to_a.each{ |m| queue_msg(m)}
+                @queue.send(*method)
               end
+
+              @queue.read_msgs.each{ |msg| queue_msg(msg[:msg], **msg[:meta]) }
 
               sleep_time = @interval - (Time.now.to_f - start)
               sleep(sleep_time < 0 ? 0 : sleep_time)
             end
           rescue StandardError, Exception => e
-            queue_msg(e)
+            queue_msg(e, severity: 2)
             e
           end
         }
