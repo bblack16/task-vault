@@ -3,24 +3,25 @@ require 'socket'
 class TaskVault
 
   class Sentry < Component
-    attr_reader :port, :controller, :key
+    attr_reader :port, :controller, :key, :interval
 
-    def running?
-      @controller.running?
+    # 0 is HIGHLY not recommended as it is massive overkill for message processing in most use cases
+    def interval= i
+      @interval = BBLib.keep_between(i, 0, nil)
     end
 
-    def start
-      @started = Time.now
-      @controller.start
+    def running?
+      @controller.running? && (@thread && @thread.alive?)
     end
 
     def stop
-      @stopped = Time.now
       @controller.stop
+      super
     end
 
     def restart
-      @controller.restart
+      stop
+      start
     end
 
     def port= port
@@ -48,6 +49,7 @@ class TaskVault
       def setup_defaults
         @port = 2016
         @key = 'changeme'
+        @interval = 5
         @controller = Ava::Controller.new(port: @port, key: @key)
         @controller.register(
           task_vault: @parent,
@@ -61,7 +63,19 @@ class TaskVault
 
       def init_thread
         @controller.start
-        queue_msg("INFO - Sentry is up and listening on port #{@port}.")
+        @thread = Thread.new {
+          queue_msg("Sentry is up and listening on port #{@port}.", severity: 6)
+          loop do
+            begin
+              @parent.courier.handlers.each do |handler|
+                @controller.register( "handler_#{handler.name.to_clean_sym}".to_sym => handler )
+              end
+              sleep(interval)
+            rescue StandardError, Exception => e
+              queue_msg(e, severity: 2)
+            end
+          end
+        }
       end
 
     end
