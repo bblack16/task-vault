@@ -55,7 +55,7 @@ class TaskVault
         begin
           add_task Task.load(file)
         rescue StandardError, Exception => e
-          queue_msg("WARN - Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}")
+          queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
         end
       end
       true
@@ -65,17 +65,17 @@ class TaskVault
 
       def init_thread
         @thread = Thread.new {
-          queue_msg 'INFO - Workbench\'s scheduler is firing up...'
+          queue_msg 'Workbench\'s scheduler is firing up...', severity: 6
           begin
             loop do
               start = Time.now.to_f
 
-              queue_msg 'DEBUG - Workbench is checking for new/updated/removed tasks.'
+              queue_msg 'Workbench is checking for new/updated/removed tasks.', severity: 8
 
               begin
                 load_cfg
               rescue StandardError => e
-                queue_msg "ERROR - Workbench failed to load config: #{e}"
+                queue_msg "Workbench failed to load config: #{e}", severity: 3
               end
 
               counts = { new:0, updated:0, removed:0 }
@@ -83,7 +83,7 @@ class TaskVault
 
               # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
               @tasks.each do |name, task|
-                (task.is_a?(TaskVault::DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
+                (task.is_a?(DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
                   n = t.name
                   task_set.push(n)
                   if @active.include?(n) && @active[n] != t.serialize
@@ -108,13 +108,13 @@ class TaskVault
                 end
               end
 
-              queue_msg("#{counts.any?{|k,v| v > 0} ? "INFO" : "DEBUG"} - Workbench completed check. #{counts.map{ |k, v| "#{v} #{k}"}.join(', ')}")
+              queue_msg("Workbench completed check. Currently managing #{task_set.count} tasks. #{counts.map{ |k, v| "#{v} #{k}"}.join(', ')}", severity:(counts.any?{|k,v| v > 0} ? 5 : 7))
 
               sleep_time = @interval - (Time.now.to_f - start)
               sleep(sleep_time < 0 ? 0 : sleep_time)
             end
           rescue StandardError, Exception => e
-            queue_msg(e)
+            queue_msg(e, severity: 2)
             e
           end
         }
