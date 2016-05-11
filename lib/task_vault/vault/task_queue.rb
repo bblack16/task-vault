@@ -1,10 +1,11 @@
 class TaskVault
 
   class TaskQueue
-    attr_reader :tasks, :retention, :last_id, :interpreters
+    attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue
 
     def initialize retention: nil, starting_id:-1
       @last_id = starting_id
+      @msg_queue = []
       @interpreters = {}
       add_interpreter :ruby, Gem.ruby, '.rb'
       @tasks = {
@@ -14,6 +15,18 @@ class TaskVault
         done: []
       }
       self.retention = retention
+    end
+
+    def queue_msg msg, **meta
+      @msg_queue << {msg: msg, meta: meta}
+    end
+
+    def read_msgs
+      temp = []
+      while @msg_queue.size > 0
+        temp.unshift @msg_queue.shift
+      end
+      temp
     end
 
     def retention= r
@@ -104,7 +117,7 @@ class TaskVault
       finished: :done,
       error: :done,
       waiting: :queued,
-      failed_dependency: :done,
+      failed_dependency: :queued,
       missing_dependency: :queued,
       timeout: :done,
       canceled: :done,
@@ -147,7 +160,7 @@ class TaskVault
           total+=1
         end
       end
-      total == 0 ? nil : "INFO - Moved #{total} tasks from queued to ready."
+      queue_msg("Moved #{total} tasks from queued to ready.", severity: 5) if total > 0
     end
 
     def elevate_tasks policy
@@ -160,23 +173,22 @@ class TaskVault
     end
 
     def check_running
-      msgs = []
       @tasks[:running].each do |t|
         if t.thread.alive? && !t.max_life.nil? && Time.now - r.started > r.max_life
           move_task(t, :timeout)
-          msgs.push "WARN - Task '#{t.name} (ID: #{t.id})' has exceeded its max life and had to be put down."
+          queue_msg "Task '#{t.name} (ID: #{t.id})' has exceeded its max life and had to be put down.", severity: 3
         end
         if !t.thread.alive?
           if parse_repeat(t)
+            t.status = :finished
             move_task(t, :queued)
-            msgs.push "INFO - Task '#{t.name} (ID: #{t.id})' has finished and will repeat. Next eligible time is #{t.start_at}"
+            queue_msg "Task '#{t.name} (ID: #{t.id})' has finished and will repeat. Next eligible time is #{t.start_at}", severity: 6
           else
             move_task(t, (t.thread.value.is_a?(Exception) ? :error : :finished) )
-            msgs.push "INFO - Task '#{t.name} (ID: #{t.id})' completed with no repeat toggled. Result was (first 50 chars): #{t.value.to_s[0..50]}"
+            queue_msg "Task '#{t.name} (ID: #{t.id})' completed with no repeat toggled. Result was (first 50 chars): #{t.value.to_s[0..50]}", severity: 6
           end
         end
       end
-      return msgs
     end
 
     def running_weight
@@ -184,20 +196,19 @@ class TaskVault
     end
 
     def run_tasks limit
-      msgs, weight = [], running_weight
+      weight = running_weight
       @tasks[:ready].each do |t|
         if limit.nil? || t.weight + weight <= limit || t.priority == 0
           if t.run get_interpreter(t.interpreter, t.job)
             move_task(t, :running)
-            msgs.push "INFO - Task '#{t.name} (ID: #{t.id})' has started!"
+            queue_msg "Task '#{t.name} (ID: #{t.id})' has started!", severity: 5
             weight+= t.weight
           else
             move_to(t, :error)
-            msgs.push "ERROR - An error occured while trying to build task '#{t.name} (ID: #{t.id})'. It could not be run."
+            queue_msg "An error occured while trying to build task '#{t.name} (ID: #{t.id})'. It could not be run.", severity: 2
           end
         end
       end
-      return msgs
     end
 
     def dependency_check task
@@ -209,22 +220,33 @@ class TaskVault
           ready = false
         else
           case t.to_sym
-          when :wait
-            if deps.any?{ |d| [:queued, :waiting, :ready, :running].include?(d.status) }
-              move_task(task, :waiting)
-              ready = false
-            end
-          when :prereq, :value, :prereq_value
-            if deps.any?{ |d| [:timeout, :error, :canceled, :failed_dependency].include?(d.status) }
-              ready = false
-              move_task(task, :failed_dependency)
-            elsif t == :value && !deps.any?{ |d| [:queued, :waiting, :ready, :running].include?(d.status) }
-              task.dargs = deps.map{ |d| d.value }
+          when :wait, :value
+            if deps.all?{ |d| d.finished && (task.finished.nil? || d.finished > task.finished) }
+              ready = true
             else
               move_task(task, :waiting)
               ready = false
             end
+          when :prereq, :prereq_value
+            if deps.any?{ |d| [:timeout, :error, :canceled, :failed_dependency].include?(d.status) }
+              move_task(task, :failed_dependency)
+              ready = false
+            elsif deps.all?{ |d| d.finished && (task.finished.nil? || d.finished > task.finished) }
+              ready = true
+            else
+              move_task(task, :waiting)
+              ready = false
+            end
+          when :on_finish, :on_finish_value
+            ready = deps.all?{ |d| [:timeout, :error, :canceled, :failed_dependency, :finished].include?(d.status) }
+          when :on_fail, :on_fail_value
+            ready = deps.all?{ |d| [:timeout, :error, :canceled, :failed_dependency].include?(d.status) }
+          when :on_success, :on_success_value
+            ready = deps.all?{ |d| [:finished].include?(d.status) }
           end
+        end
+        if ready && t.to_s.end_with?('value')
+          task.dependency_args = deps.first.history.last[:value]
         end
       end
       ready
