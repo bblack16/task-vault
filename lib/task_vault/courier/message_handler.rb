@@ -46,7 +46,7 @@ class TaskVault
 
     def save path = Dir.pwd, format = :yaml
       path = path.gsub('\\', '/')
-      path = (!path.end_with?('/') ? path + '/' : '') + @name.to_s + '.' + format.to_s
+      path = (!path.end_with?('/') ? path + '/' : path) + @name.to_s + '.' + format.to_s
       case format
       when :yaml
         serialize.to_yaml.to_file(path, mode: 'w')
@@ -94,11 +94,17 @@ class TaskVault
         @queue = []
         self.name = :default
         self.interval = 0.5
-        setup_serialize_fields
+        @serialize_fields = default_serialize_fields + setup_serialize_fields
       end
 
       def setup_serialize_fields
-        @serialize_fields = [:name, :interval]
+         # Implement in child classes for easy serializing
+         # Must return an array
+         []
+      end
+
+      def default_serialize_fields
+        [:name, :interval]
       end
 
   end
