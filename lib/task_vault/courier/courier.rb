@@ -1,4 +1,6 @@
 require_relative 'message_handler'
+require_relative 'message_handlers/task_vault_handler'
+require_relative 'message_handlers/task_vault_logger'
 
 class TaskVault
 
@@ -29,21 +31,22 @@ class TaskVault
     end
 
     def add_handler mh, overwrite = true
-      # TODO Implement something to achieve the below line
-      # mh = MessageHandler.new(**mh) if mh.is_a?(Hash)
       if @handlers.any?{ |a| a.name == mh.name }
         match = @handlers.find{ |h| h.name == mh.name }
         if overwrite && match.serialize != mh.serialize
           match.stop
-          queue = match.message_queue
-          queue.each do |hash|
+          while hash = match.read_msg
             mh.queue_msg(hash.delete(:msg), hash.delete(:handlers), hash)
           end
-          @handlers.delete(match)
+          @handlers.delete_if{ |h| h.name == mh.name}
           @handlers.push mh
+          mh.start
+          queue_msg("Overwrote existing version of '#{mh.name}' with a new copy found in the config directory", severity: 5)
         end
       else
         @handlers.push mh
+        mh.start
+        queue_msg("Added new handler to Courier: #{mh.name}.", severity: 6)
       end
     end
 
@@ -53,11 +56,21 @@ class TaskVault
           begin
             add_handler MessageHandler.load(file)
           rescue StandardError, Exception => e
-            queue_msg("WARN - Courier failed to load message handler from #{file}. Please fix or remove this file. #{e}")
+            queue_msg("Courier failed to load message handler from #{file}. Please fix or remove this file. #{e}", severity: 4)
           end
         end
       rescue StandardError, Exception => e
-        queue_msg(e)
+        queue_msg(e, severity: 2)
+      end
+    end
+
+    def save_handlers format = :json
+      begin
+        @handlers.map do |handler|
+          [handler.name, handler.save(@path)]
+        end.to_h
+      rescue StandardError, Exception => e
+        queue_msg(e, severity: 2)
       end
     end
 
@@ -74,7 +87,7 @@ class TaskVault
             loop do
               start = Time.now.to_f
               if @load_interval && index == 0
-                queue_msg("DEBUG - Courier is reloading message handlers from disk...")
+                queue_msg("Courier is reloading message handlers from disk...", severity: 8)
                 load_handlers
                 index = @load_interval
               end
@@ -93,7 +106,7 @@ class TaskVault
                     details = obj.read_msg
                     details[:handlers] = [:default] if details[:handlers].empty?
                     details[:handlers].each do |h|
-                      handler = @handlers.find{ |hand| hand.name = h}
+                      handler = @handlers.find{ |hand| hand.name == h }
                       handler.queue details[:msg], **details[:meta] if handler
                     end
                   end
@@ -112,7 +125,7 @@ class TaskVault
       end
 
       def setup_defaults
-        @handlers = [MessageHandler.new]
+        @handlers = [TaskVaultHandler.new]
         self.interval = 0.5
         self.load_interval = 120
       end
