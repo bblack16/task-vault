@@ -2,10 +2,11 @@ class TaskVault
 
   # This is meant to be an abstract class that all the various TaskVault components inherit from to get boilerplate code out of the way
   class Component
-    attr_reader :message_queue, :parent, :thread, :started, :stopped
+    attr_reader :message_queue, :parent, :thread, :started, :stopped, :message_handlers
 
     def initialize parent = nil, *args, **named
       self.parent = parent
+      @message_handlers = [:default]
       setup_defaults
       process_args(*args, **named)
       if named.include?(:start)
@@ -16,12 +17,12 @@ class TaskVault
     def start
       init_thread unless running?
       @started = Time.now
-      queue_msg("DEBUG - Starting #{self.class}")
+      queue_msg("Starting #{self.class}", severity: 5)
       running?
     end
 
     def stop
-      queue_msg("DEBUG - Stopping #{self.class}")
+      queue_msg("Stopping #{self.class}", severity: 5)
       @stopped = Time.now
       @thread.kill if @thread
       sleep(0.3) # Need to wait for shutdown of thread before running is called. This is a possible race condition.
@@ -29,7 +30,7 @@ class TaskVault
     end
 
     def restart
-      queue_msg("DEBUG - Restarting #{self.class}")
+      queue_msg("Restarting #{self.class}", severity: 5)
       stop
       start
     end
@@ -43,9 +44,13 @@ class TaskVault
       defined?(@thread) && @thread.alive?
     end
 
-    def queue_msg msg, *handlers, **meta
+    def message_handlers= handlers
+      @message_handlers = [handlers].flatten
+    end
+
+    def queue_msg msg, **meta
       @message_queue = [] if !defined?(@message_queue)
-      @message_queue.push({ msg:msg, handlers:handlers, meta:meta.merge({time: Time.now}) })
+      @message_queue.push({ msg:msg, handlers:@message_handlers, meta:meta.merge({time: Time.now, component: self.class.to_s}) })
     end
 
     def read_msg
@@ -59,16 +64,6 @@ class TaskVault
     def parent= p
       @parent = p if p.is_a?(TaskVault)
     end
-
-    # Should no longer be needed..leaving for now to be determined/deleted later
-    # def set var, setting
-    #   cmd = "#{var}=".to_sym
-    #   if self.respond_to?(cmd)
-    #     send(cmd, setting)
-    #   else
-    #     raise ArgumentError, "No setter method is availabe for '#{var}' on '#{self.class}'"
-    #   end
-    # end
 
     protected
 
@@ -86,7 +81,7 @@ class TaskVault
           if respond_to?("#{k}=".to_sym)
             send("#{k}=".to_sym, v)
           else
-            queue_msg("WARN - Unknown parameter passed to #{self.class}: #{k}. Ignoring...")
+            queue_msg("Unknown parameter passed to #{self.class}: #{k}. Ignoring...", severity: 8)
           end
         end
       end
