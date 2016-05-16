@@ -1,7 +1,6 @@
 require_relative "component"
-require_relative "task/base_task"
 require_relative "task/task"
-require_relative "task/dynamic_task"
+require_relative "task/_tasks"
 require_relative "vault/vault"
 require_relative "workbench/workbench"
 require_relative "protectron/protectron"
@@ -12,7 +11,7 @@ class TaskVault
   attr_reader :cfg_policy, :path, :vault, :workbench, :protectron, :courier, :sentry
 
   def initialize path = Dir.pwd, start: false
-    @vault = Vault.new
+    @vault = Vault.new(self)
     @workbench = Workbench.new(self)
     @courier = Courier.new(self)
     @sentry = Sentry.new(self)
