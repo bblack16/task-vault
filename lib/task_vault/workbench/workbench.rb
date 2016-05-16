@@ -83,20 +83,18 @@ class TaskVault
               task_set = []
 
               # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
-              @tasks.each do |name, task|
-                (task.is_a?(DynamicTask) ? task.generate_tasks : [task]).flatten.each do |t|
-                  n = t.name
-                  task_set.push(n)
-                  if @active.include?(n) && @active[n] != t.serialize
-                    @parent.vault.cancel(n)
-                    @parent.vault.queue t
-                    @active[n] = t.serialize
-                    counts[:updated]+=1
-                  elsif @active[n].nil?
-                    @parent.vault.queue t
-                    @active[n] = t.serialize
-                    counts[:new]+=1
-                  end
+              @tasks.each do |name, t|
+                n = t.name
+                task_set.push(n)
+                if @active.include?(n) && @active[n] != t.serialize
+                  @parent.vault.cancel(n)
+                  @parent.vault.queue t
+                  @active[n] = t.serialize
+                  counts[:updated]+=1
+                elsif @active[n].nil?
+                  @parent.vault.queue t
+                  @active[n] = t.serialize
+                  counts[:new]+=1
                 end
               end
 
