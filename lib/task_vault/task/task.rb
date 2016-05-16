@@ -1,20 +1,18 @@
-require 'securerandom'
+require_relative 'task_template'
 
 class TaskVault
 
-  class Task < BaseTask
-    attr_reader :id, :name, :type, :working_dir, :interpreter,
-                :job, :args, :weight, :priority,
+  # Task exists soley as an abstract class and is essentially useless on its own.
+  # CMDTask is the most basic full implementation of this class
+  class Task < Component
+    attr_reader :id, :name, :working_dir,
+                :args, :weight, :priority, :templates,
                 :max_life, :value_cap, :repeat, :delay, :start_at,
                 :dependencies, :history, :history_limit, :run_limit,
-                :initial_priority, :run_count, :status, :dependency_args
+                :initial_priority, :run_count, :status
 
-    TYPES = [
-      :proc, :cmd, :script, :eval  #, :eval_proc
-    ]
-
-    def run interpreter_path = @interpreter
-      pr = build_proc interpreter_path
+    def run *args, **named
+      pr = build_proc(*args, **named)
       if pr
         self.set_time :started, Time.now
         self.status = :running
@@ -36,20 +34,16 @@ class TaskVault
       @name = n.to_s
     end
 
-    def type= t
-      @type = TYPES.include?(t.to_sym) ? t.to_sym : nil
-    end
-
     def id= i
       @id = i.to_i
     end
 
-    def job= pr
-      @job = pr
+    def args= a
+      @args = (a.nil? ? [] : [a].flatten(1))
     end
-
-    def interpreter= i
-      @interpreter = i
+    
+    def templates= *t
+      @templates = t.flatten
     end
 
     def working_dir= w
@@ -63,19 +57,7 @@ class TaskVault
         nil
       end
     end
-
-    def args
-      @args + @dependency_args
-    end
-
-    def args= a
-      @args = (a.nil? ? [] : [a].flatten(1))
-    end
-
-    def dependency_args= a
-      @dependency_args = a.nil? ? [] : [a].flatten(1)
-    end
-
+    
     def weight= w
       @weight = BBLib::keep_between(w.to_i, 0, nil)
     end
@@ -173,48 +155,14 @@ class TaskVault
       @times[type] = time
     end
 
-    def method_missing args
-      if @times.include?(args)
-        return @times[args]
+    def method_missing sym, *args, **named
+      if @times.include?(sym)
+        return @times[sym]
       else
-        super(args)
+        super
       end
     end
-
-    def serialize
-      values = BBLib.to_hash(self)
-      values.hash_path_delete(
-        'initial_priority',
-        'dependency_args',
-        'times',
-        'thread',
-        'value',
-        'run_count',
-        'id',
-        'status',
-        'start_at',
-        'message_queue',
-        'proc',
-        'history'
-      )
-      return values
-    end
-
-    def save path = Dir.pwd, format = :yaml
-      path = path.gsub('\\', '/')
-      name = @name.to_s != '' ? @name : SecureRandom.hex(10);
-      path = (!path.end_with?('/') ? path + '/' : '') + name + '.' + format.to_s
-      case format
-      when :yaml
-        serialize.to_yaml.to_file(path, mode: 'w')
-      when :json
-        serialize.to_json.to_file(path, mode: 'w')
-      when :xml # Currenlty XML cannot be reserialized from
-        serialize.to_xml.to_file(path, mode: 'w')
-      end
-      path
-    end
-
+    
     def started
       method_missing(:started)
     end
@@ -233,21 +181,98 @@ class TaskVault
       canceled: {},
       unknown: {}
     }
+    
+    def save path = Dir.pwd, format = :yaml
+      path = path.gsub('\\', '/')
+      name = @name.to_s != '' ? @name : SecureRandom.hex(10);
+      path = (path + '/' + name + '.' + format.to_s).pathify
+      case format
+      when :yaml
+        serialize.to_yaml.to_file(path, mode: 'w')
+      when :json
+        serialize.to_json.to_file(path, mode: 'w')
+      when :xml # Currenlty XML cannot be reserialized from
+        serialize.to_xml.to_file(path, mode: 'w')
+      end
+      path
+    end
 
+    # Loads a task or dynamic task from either a path to a yaml or json file or from a hash
+    def self.load path, templates = nil
+      data = (path.is_a?(Hash) ? path : Hash.new)
+      if path.is_a?(String)
+        if path.end_with?('.yaml') || path.end_with?('.yml')
+          data = YAML.load_file(path)
+        elsif path.end_with?('.json')
+          data = JSON.parse(File.read(path))
+        else
+          raise "Failed to load task from '#{path}'. Invalid file type. Must be yaml or json."
+        end
+      end
+      data.keys_to_sym!
+
+      # Load templates
+      unless templates.nil?
+        if data.include?(:templates)
+          [data[:templates]].flatten.each do |temp|
+            tpath = "#{templates}/#{temp}.template".pathify
+            puts temp, tpath, File.exists?(tpath)
+            if File.exists?(tpath)
+              data.deep_merge!(TaskTemplate.load(tpath).defaults)
+            end
+          end
+        end
+      end
+
+      if data.include?(:class)
+        task = Object.const_get(data.delete(:class).to_s).new(**data)
+      else
+        task = Task.new(**data)
+      end
+      raise "Failed to load task, invalid type '#{task.class}' is not inherited from TaskVault::Task" unless task.is_a?(Task)
+      return task
+    end
+    
+    def serialize
+      values = BBLib.to_hash(self).merge({class: "#{self.class}"})
+      values.hash_path_delete(*ignore_on_serialize)
+      return values
+    end
+    
     protected
-
+    
+      def ignore_on_serialize
+        [
+          'initial_priority',
+          'times',
+          'thread',
+          'value',
+          'run_count',
+          'id',
+          'status',
+          'start_at',
+          'message_queue',
+          'history'
+        ]
+      end
+      
+      def build_proc *args, **named
+        # This method should generate and return a ruby proc
+        proc{ |x| 'Do something?!?!' }
+      end
+    
       def init_thread
         run
       end
-
+      
       def setup_defaults
         @times = {queued:nil, added:nil, started:nil, finished:nil, last_elevated:nil, created:nil}
         @run_count, @value, @thread = 0, nil, nil
         @dependencies, @history, @dependency_args = {}, [], []
+        @templates = []
         self.type = :proc
         self.id = nil
         self.name = SecureRandom.hex(10)
-        self.job = nil
         self.interpreter = nil
         self.working_dir = nil
         self.args = nil
@@ -260,8 +285,13 @@ class TaskVault
         self.repeat = 1
         self.message_handlers = :default
         self.history_limit = 10
+        custom_defaults
       end
-
+      
+      def custom_defaults
+        # Meant to be abstract
+      end
+      
       def process_args *args, **named
         # Handle arguments passed in to initialize
         if
@@ -273,7 +303,7 @@ class TaskVault
         end
         super(*args, **named)
       end
-
+      
       def add_history value, **other
         @history.push({value: value, time: Time.now, run_count: @run_count}.merge(**other))
         while @history.size > @history_limit
@@ -281,62 +311,9 @@ class TaskVault
         end
         value
       end
-
-      def build_proc interpreter_path
-        @proc = nil
-        case @type
-        when :proc
-          @proc = @job.is_a?(Proc) ? @job : nil
-        when :cmd
-          @proc = cmd_proc(@job)
-        when :script
-          @proc = cmd_proc("#{interpreter_path} #{@job}")
-        when :eval
-          @proc = eval_proc(@job)
-        end
-        @proc
-      end
-
-      def cmd_proc cmd
-        proc{ |*args|
-          results = []
-          if @working_dir
-            process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }", chdir: @working_dir)
-          else
-            process = IO.popen("#{cmd} #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
-          end
-          while !process.eof?
-            line = process.readline
-            queue_msg(line, task_name: @name, task_id: @id, severity: 5)
-            results << line
-            if @value_cap
-              results.shift until results.size <= @value_cap
-            end
-          end
-          process.close
-          results
-        }
-      end
-
-      def eval_proc eval
-        proc{ |*args|
-          results = []
-          if @working_dir
-            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\" #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }", chdir: @working_dir)
-          else
-            process = IO.popen("#{Gem.ruby} -e \"#{eval.gsub("\"", "\\\"")}\" #{args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ') }")
-          end
-          while !process.eof?
-            line = process.readline
-            queue_msg(line, task_name: @name, task_id: @id, severity: 5)
-            results << line
-            if @value_cap
-              results.shift until results.size <= @value_cap
-            end
-          end
-          process.close
-          results
-        }
+      
+      def setup_args *args
+        args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ')
       end
 
       def calc_start_time
