@@ -38,7 +38,7 @@ class TaskVault
     end
 
     def queue task
-      task = Task.new(**task) if task.is_a?(Hash)
+      task = Task.new(self, **task) if task.is_a?(Hash)
       raise ArgumentError, "Invalid type passed to TaskQueue. Got a '#{task.class}', expected a TaskVault::Task." unless task.is_a?(Task)
       task.status = :queued
       task.id = next_id
@@ -199,7 +199,7 @@ class TaskVault
       weight = running_weight
       @tasks[:ready].each do |t|
         if limit.nil? || t.weight + weight <= limit || t.priority == 0
-          if t.run get_interpreter(t.interpreter, t.job)
+          if t.run get_interpreter(t.interpreter, t.cmd)
             move_task(t, :running)
             queue_msg "Task '#{t.name} (ID: #{t.id})' has started!", severity: 5
             weight+= t.weight
