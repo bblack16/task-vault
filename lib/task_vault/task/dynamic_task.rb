@@ -2,24 +2,38 @@
 
 class TaskVault
 
-  class DynamicTask < BaseTask
-    attr_reader :name
-
-    def initialize name
-      self.name = name
+  class DynamicTask < Task
+    attr_reader :interval
+    
+    def interval= it
+      @interval = BBLib::keep_between(it, 0, nil)
     end
-
-    def name= n
-      @name = n.to_s
-    end
-
-    def generate_tasks
-      raise "This method is abstract and should have been overwritten"
-    end
-
-    def serialize
-      BBLib.to_hash(self).hash_path_set('class' => self.class.to_s)
-    end
+    
+    protected
+    
+      def generate_tasks *args
+        raise "This method is abstract and should have been redefined."
+      end
+      
+      def start_tasks *tasks
+        tasks.each{ |task| @parent.queue task }
+      end
+    
+      def custom_defaults
+        self.interval = 10
+        self.name = SecureRandom.hex(10)
+        self.repeat = true
+      end
+      
+      def build_proc
+        proc{ |*args|
+          loop do
+            start = Time.now
+            generate_tasks
+            sleep(BBLib::keep_between(@interval - (Time.now - start), 0, nil))
+          end
+        }
+      end
 
   end
 
