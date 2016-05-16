@@ -16,7 +16,7 @@ class TaskVault
       end
       
       def start_tasks *tasks
-        tasks.each{ |task| @parent.queue task }
+        tasks.each{ |task| @parent.queue task if task.is_a?(Task) }
       end
     
       def custom_defaults
@@ -25,11 +25,11 @@ class TaskVault
         self.repeat = true
       end
       
-      def build_proc
+      def build_proc *args, **named
         proc{ |*args|
           loop do
             start = Time.now
-            generate_tasks
+            start_tasks(generate_tasks(*args))
             sleep(BBLib::keep_between(@interval - (Time.now - start), 0, nil))
           end
         }
@@ -40,4 +40,4 @@ class TaskVault
 end
 
 
-require_relative 'dynamic_tasks/dynamic_scripts'
+require_relative 'dynamic_tasks/script_folder'
