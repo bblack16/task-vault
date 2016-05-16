@@ -270,10 +270,8 @@ class TaskVault
         @run_count, @value, @thread = 0, nil, nil
         @dependencies, @history, @dependency_args = {}, [], []
         @templates = []
-        self.type = :proc
         self.id = nil
         self.name = SecureRandom.hex(10)
-        self.interpreter = nil
         self.working_dir = nil
         self.args = nil
         self.weight = 1
