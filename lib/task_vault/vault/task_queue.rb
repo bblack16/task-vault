@@ -199,7 +199,7 @@ class TaskVault
       weight = running_weight
       @tasks[:ready].each do |t|
         if limit.nil? || t.weight + weight <= limit || t.priority == 0
-          if t.run get_interpreter(t.interpreter, t.cmd)
+          if t.run # get_interpreter(t.interpreter, t.cmd)
             move_task(t, :running)
             queue_msg "Task '#{t.name} (ID: #{t.id})' has started!", severity: 5
             weight+= t.weight
