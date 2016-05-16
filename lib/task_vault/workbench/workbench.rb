@@ -14,9 +14,9 @@ class TaskVault
     end
 
     def add_task task
-      task = BaseTask.load(task) if task.is_a?(Hash) || task.is_a?(String)
+      task = Task.load(task) if task.is_a?(Hash) || task.is_a?(String)
       [task].flatten.each do |t|
-        if t.is_a?(BaseTask)
+        if t.is_a?(Task)
           @tasks[t.name] = t
         end
       end
@@ -56,6 +56,7 @@ class TaskVault
           add_task Task.load(file)
         rescue StandardError, Exception => e
           queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
+          queue_msg(e, severity: 3)
         end
       end
       true
