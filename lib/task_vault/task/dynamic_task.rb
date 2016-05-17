@@ -3,10 +3,18 @@
 class TaskVault
 
   class DynamicTask < Task
-    attr_reader :interval
+    attr_reader :interval, :parent_repeat
     
     def interval= it
       @interval = BBLib::keep_between(it, 0, nil)
+    end
+    
+    def parent_repeat= pr
+      @parent_repeat = pr
+    end
+    
+    def repeat
+      @parent_repeat
     end
     
     protected
@@ -15,14 +23,14 @@ class TaskVault
         raise "This method is abstract and should have been redefined."
       end
       
-      def start_tasks *tasks
+      def start_tasks tasks
         tasks.each{ |task| @parent.queue task if task.is_a?(Task) }
       end
     
       def custom_defaults
         self.interval = 10
         self.name = SecureRandom.hex(10)
-        self.repeat = true
+        self.parent_repeat = true
       end
       
       def build_proc *args, **named
