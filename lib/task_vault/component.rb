@@ -62,7 +62,7 @@ class TaskVault
     end
 
     def parent= p
-      @parent = p if p.is_a?(TaskVault)
+      @parent = p
     end
 
     protected
