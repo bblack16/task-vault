@@ -1,9 +1,9 @@
 class TaskVault
 
   class TaskQueue
-    attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue
+    attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue, :path
 
-    def initialize retention: nil, starting_id:-1
+    def initialize retention: nil, starting_id:-1, path: Dir.pwd
       @last_id = starting_id
       @msg_queue = []
       @interpreters = {}
@@ -19,6 +19,10 @@ class TaskVault
 
     def queue_msg msg, **meta
       @msg_queue << {msg: msg, meta: meta}
+    end
+
+    def path= pth
+      @path = pth.to_s.pathify
     end
 
     def read_msgs
@@ -38,10 +42,11 @@ class TaskVault
     end
 
     def queue task
-      task = Task.new(self, **task) if task.is_a?(Hash)
+      task = Task.load(task, "#{@path}/templates/".pathify) if task.is_a?(Hash)
       raise ArgumentError, "Invalid type passed to TaskQueue. Got a '#{task.class}', expected a TaskVault::Task." unless task.is_a?(Task)
       task.status = :queued
       task.id = next_id
+      task.parent = self
       @tasks[:queued].push task
       {id: task.id, name: task.name, start_time:task.start_at}
     end
@@ -160,7 +165,7 @@ class TaskVault
           total+=1
         end
       end
-      queue_msg("Moved #{total} tasks from queued to ready.", severity: 5) if total > 0
+      queue_msg("Moved #{total} task#{total > 1 ? 's' : nil} from queued to ready.", severity: 7) if total > 0
     end
 
     def elevate_tasks policy
@@ -201,7 +206,7 @@ class TaskVault
         if limit.nil? || t.weight + weight <= limit || t.priority == 0
           if t.run # get_interpreter(t.interpreter, t.cmd)
             move_task(t, :running)
-            queue_msg "Task '#{t.name} (ID: #{t.id})' has started!", severity: 5
+            # queue_msg "Task '#{t.name} (ID: #{t.id})' has started!", severity: 5
             weight+= t.weight
           else
             move_to(t, :error)
