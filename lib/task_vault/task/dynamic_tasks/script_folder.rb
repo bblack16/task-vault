@@ -13,7 +13,20 @@ class TaskVault
 
     def generate_tasks
       BBLib.scan_files(@path, filter:@filter, recursive:@recursive).map do |script|
-        task = Task.new(name:"#{@name}_#{script}", type: :script, cmd:script, working_dir:@working_dir, args:@args, weight:@weight, priority:@priority, max_life:@max_life, value_cap:@value_cap, repeat:@repeat, delay:@delay, message_handlers:@message_handlers)
+        task = CMDTask.new(
+            name:"#{@name}_#{script}",
+            type: :script,
+            cmd:script,
+            working_dir:@working_dir,
+            args:@args,
+            weight:@weight,
+            priority:@priority,
+            max_life:@max_life,
+            value_cap:@value_cap,
+            repeat:@repeat,
+            delay:@delay,
+            message_handlers:@message_handlers
+          )
         if @scripts.include?(script)
           if @scripts[script] != task.serialize
             @scripts[script] = task.serialize
@@ -29,9 +42,9 @@ class TaskVault
         task
       end
     end
-    
+
     protected
-    
+
       def custom_defaults
         @scripts = Hash.new
         super
