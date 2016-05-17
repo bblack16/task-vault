@@ -41,7 +41,7 @@ class TaskVault
     def args= a
       @args = (a.nil? ? [] : [a].flatten(1))
     end
-    
+
     def templates= *t
       @templates = t.flatten
     end
@@ -57,7 +57,7 @@ class TaskVault
         nil
       end
     end
-    
+
     def weight= w
       @weight = BBLib::keep_between(w.to_i, 0, nil)
     end
@@ -162,7 +162,7 @@ class TaskVault
         super
       end
     end
-    
+
     def started
       method_missing(:started)
     end
@@ -181,7 +181,7 @@ class TaskVault
       canceled: {},
       unknown: {}
     }
-    
+
     def save path = Dir.pwd, format = :yaml
       path = path.gsub('\\', '/')
       name = @name.to_s != '' ? @name : SecureRandom.hex(10);
@@ -198,7 +198,7 @@ class TaskVault
     end
 
     # Loads a task or dynamic task from either a path to a yaml or json file or from a hash
-    def self.load path, templates = nil
+    def self.load path, templates = nil, parent: nil
       data = (path.is_a?(Hash) ? path : Hash.new)
       if path.is_a?(String)
         if path.end_with?('.yaml') || path.end_with?('.yml')
@@ -224,23 +224,19 @@ class TaskVault
         end
       end
 
-      if data.include?(:class)
-        task = Object.const_get(data.delete(:class).to_s).new(**data)
-      else
-        task = Task.new(**data)
-      end
+      task = Object.const_get(data.delete(:class).to_s).new(parent, **data)
       raise "Failed to load task, invalid type '#{task.class}' is not inherited from TaskVault::Task" unless task.is_a?(Task)
       return task
     end
-    
+
     def serialize
       values = BBLib.to_hash(self).merge({class: "#{self.class}"})
       values.hash_path_delete(*ignore_on_serialize)
       return values
     end
-    
+
     protected
-    
+
       def ignore_on_serialize
         [
           'initial_priority',
@@ -252,19 +248,20 @@ class TaskVault
           'status',
           'start_at',
           'message_queue',
-          'history'
+          'history',
+          'parent'
         ]
       end
-      
+
       def build_proc *args, **named
         # This method should generate and return a ruby proc
         proc{ |x| 'Do something?!?!' }
       end
-    
+
       def init_thread
         run
       end
-      
+
       def setup_defaults
         @times = {queued:nil, added:nil, started:nil, finished:nil, last_elevated:nil, created:nil}
         @run_count, @value, @thread = 0, nil, nil
@@ -285,11 +282,11 @@ class TaskVault
         self.history_limit = 10
         custom_defaults
       end
-      
+
       def custom_defaults
         # Meant to be abstract
       end
-      
+
       def process_args *args, **named
         # Handle arguments passed in to initialize
         if
@@ -301,7 +298,7 @@ class TaskVault
         end
         super(*args, **named)
       end
-      
+
       def add_history value, **other
         @history.push({value: value, time: Time.now, run_count: @run_count}.merge(**other))
         while @history.size > @history_limit
@@ -309,7 +306,7 @@ class TaskVault
         end
         value
       end
-      
+
       def setup_args *args
         args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ')
       end
