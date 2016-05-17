@@ -10,7 +10,8 @@ class TaskVault
     end
 
     def path= p
-      @path = p.to_s.gsub('\\', '/')
+      @path = p.to_s.pathify
+      @queue.path = @path
     end
 
     def interval= i
