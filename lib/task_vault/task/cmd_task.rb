@@ -44,14 +44,14 @@ class TaskVault
       end
 
       def build_proc *args, **named
-        interpreter_path = args.first || @interpreter
         case @type
         when :proc
           @cmd.is_a?(Proc) ? @cmd : nil
         when :cmd
           cmd_proc(generate_cmd(@cmd, args))
         when :script
-          cmd_proc("#{interpreter_path} #{generate_cmd(@cmd, args)}")
+          interpreter = @parent.get_interpreter(@interpreter, @cmd) rescue nil
+          cmd_proc("#{interpreter} #{generate_cmd(@cmd, args)}")
         when :eval
           cmd_proc("#{Gem.ruby} -e \"#{@cmd.gsub("\"", "\\\"")}\" #{setup_args(args)}")
         else
