@@ -16,9 +16,7 @@ class TaskVault
     def add_task task
       task = Task.load(task) if task.is_a?(Hash) || task.is_a?(String)
       [task].flatten.each do |t|
-        if t.is_a?(Task)
-          @tasks[t.name] = t
-        end
+        @tasks[t.name] = t if t.is_a?(Task)
       end
     end
 
@@ -53,7 +51,7 @@ class TaskVault
     def load_cfg
       BBLib.scan_files(@path + 'recipes/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).each do |file|
         begin
-          add_task Task.load(file)
+          add_task Task.load(file, "#{@path}/templates")
         rescue StandardError, Exception => e
           queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
           queue_msg(e, severity: 3)
