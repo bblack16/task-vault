@@ -216,16 +216,17 @@ class TaskVault
         if data.include?(:templates)
           [data[:templates]].flatten.each do |temp|
             tpath = "#{templates}/#{temp}.template".pathify
-            puts temp, tpath, File.exists?(tpath)
             if File.exists?(tpath)
               data.deep_merge!(TaskTemplate.load(tpath).defaults)
             end
           end
         end
       end
-
-      task = Object.const_get(data.delete(:class).to_s).new(parent, **data)
-      raise "Failed to load task, invalid type '#{task.class}' is not inherited from TaskVault::Task" unless task.is_a?(Task)
+      # Defaults to CMDTask is nothing else is provided
+      data[:class] = 'TaskVault::CMDTask' unless data.include?(:class)
+      klass = data.delete(:class).to_s
+      task = (Object.const_get(klass).new(parent, **data) rescue nil) # Attempt to build task
+      raise "Failed to load task, invalid type '#{klass}' is not inherited from TaskVault::Task or is not a valid class" unless task.is_a?(Task)
       return task
     end
 
