@@ -38,6 +38,10 @@ class TaskVault
       (@queue.methods + super).uniq
     end
 
+    def save_task *task, format: :yaml
+      @queue.retrieve(*task).map{ |t| [t.name, t.save(@path + '/recipes', format)] }.to_h
+    end
+
     protected
 
       def setup_defaults
