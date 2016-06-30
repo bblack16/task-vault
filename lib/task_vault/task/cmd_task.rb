@@ -9,7 +9,7 @@ class TaskVault
     TYPES = [
       :cmd, :script, :eval  #, :eval_proc
     ]
-    
+
     def type= t
       @type = TYPES.include?(t.to_sym) ? t.to_sym : nil
     end
@@ -75,13 +75,13 @@ class TaskVault
           results
         }
       end
-      
+
       # This exists for sub classes. It allows output to be modded
       # Return nil to ignore this line (not log it and not save it to history)
       def process_line line
         line
       end
-      
+
       def generate_cmd cmd, args
         "#{cmd} #{setup_args(args)}"
       end
