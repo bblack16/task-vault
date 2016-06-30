@@ -1,9 +1,9 @@
 class TaskVault
 
   class TaskQueue
-    attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue, :path
+    attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue, :path, :parent
 
-    def initialize retention: nil, starting_id:-1, path: Dir.pwd
+    def initialize retention: nil, starting_id:-1, path: Dir.pwd, parent: nil
       @last_id = starting_id
       @msg_queue = []
       @interpreters = {}
@@ -14,6 +14,7 @@ class TaskVault
         running: [],
         done: []
       }
+      @parent = parent
       self.retention = retention
     end
 
@@ -94,7 +95,7 @@ class TaskVault
     end
 
     # Tasks can be retrieved by id, name or with by passing the actual task object.
-    # An array containing the above can also be passed.
+    # An array containing any of the above classes can also be passed.
     def retrieve task
       tasks.find_all{ |t| (task.is_a?(Array) && (task.include?(t.id) || task.include?(t.name) || task.include?(t))) || t.id == task || t.name == task || t == task }
     end
@@ -132,8 +133,16 @@ class TaskVault
     def get_interpreter inter, script = nil
       return nil if inter.nil? && script.nil?
       return @interpreters[inter][:path] if @interpreters.include?(inter)
-      ft = (script.to_s.file_name.chars - script.to_s.file_name(false).chars).join
-      interpreter = @interpreters.find{|k,v| v[:file_types].include?(ft)}
+      ft = File.extname(script)
+      interpreter = @interpreters.find do |k,v|
+        v[:file_types].any? do |type|
+          if type.class == String
+            ft == type
+          elsif type.class == Regexp
+            script =~ type
+          end
+        end
+      end
       interpreter[1][:path] rescue nil
     end
 
