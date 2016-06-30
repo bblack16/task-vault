@@ -45,7 +45,7 @@ class TaskVault
     protected
 
       def setup_defaults
-        @queue = TaskQueue.new
+        @queue = TaskQueue.new parent: self
         @elevation_policy = { 0 => nil, 1 => 60, 2 => 30, 3 => 30, 4 => 60, 5 => 120, 6 => nil }
         @interval, @limit = 0.2, 5
       end
