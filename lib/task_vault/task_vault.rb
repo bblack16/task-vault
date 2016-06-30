@@ -8,13 +8,13 @@ require_relative "courier/courier"
 require_relative "sentry/sentry"
 
 class TaskVault
-  attr_reader :cfg_policy, :path, :vault, :workbench, :protectron, :courier, :sentry
+  attr_reader :path, :vault, :workbench, :protectron, :courier, :sentry
 
-  def initialize path = Dir.pwd, start: false
+  def initialize path = Dir.pwd, start: false, key: 'bobblehead', port: 2016
     @vault = Vault.new(self)
     @workbench = Workbench.new(self)
     @courier = Courier.new(self)
-    @sentry = Sentry.new(self)
+    @sentry = Sentry.new(self, key: key, port: port)
     @protectron = Protectron.new(self)
     self.path = path
     self.start if start
