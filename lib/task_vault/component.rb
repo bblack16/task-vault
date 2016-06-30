@@ -41,7 +41,7 @@ class TaskVault
     end
 
     def running?
-      defined?(@thread) && @thread.alive?
+      defined?(@thread) && !@thread.nil? && @thread.alive?
     end
 
     def message_handlers= handlers
