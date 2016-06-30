@@ -65,6 +65,14 @@ class TaskVault
       @parent = p
     end
 
+    # Custom inspect to able to hide unwanted variables or pointers
+    def inspect
+      vars = self.instance_variables.map do |v|
+        "#{v}=#{instance_variable_get(v).inspect}" unless hide_on_inspect.include?(v)
+      end.reject(&:nil?).join(", ")
+      "<#{self.class}:0x#{self.object_id} #{vars}>"
+    end
+
     protected
 
       def init_thread
@@ -84,6 +92,10 @@ class TaskVault
             queue_msg("Unknown parameter passed to #{self.class}: #{k}. Ignoring...", severity: 8)
           end
         end
+      end
+
+      def hide_on_inspect
+        [:@parent, :@thread ]
       end
 
 
