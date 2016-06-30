@@ -11,7 +11,7 @@ class TaskVault
                 :dependencies, :history, :history_limit, :run_limit,
                 :initial_priority, :run_count, :status
 
-    def run *args, **named
+    def run *arguments, **named
       pr = build_proc(*args, **named)
       if pr
         self.set_time :started, Time.now
@@ -20,7 +20,7 @@ class TaskVault
       end
       @thread = Thread.new {
         begin
-          add_history(pr.call(*args), status: :success)
+          add_history(pr.call(*arguments), status: :success)
         rescue StandardError, Exception => e
           queue_msg("Task #{@name} failed. Error message follows", severity: 2)
           queue_msg(e, severity: 2)
@@ -312,10 +312,6 @@ class TaskVault
           @history.shift
         end
         value
-      end
-
-      def setup_args *args
-        args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ')
       end
 
       def calc_start_time
