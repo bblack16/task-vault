@@ -135,7 +135,7 @@ class TaskVault
     ]
 
     def add_dependency *args, **dependencies
-      dependencies.merge(args.last) if args.last.is_a?(Hash)
+      dependencies.merge!(args.last) if args.last.is_a?(Hash)
       dependencies.each do |task, type|
         if task.to_s =~ /\A\d+\z/
           task = task.to_s.to_i
@@ -182,12 +182,11 @@ class TaskVault
       unknown: {}
     }
 
-    def save path = Dir.pwd, format = :yaml
-      path = path.gsub('\\', '/')
+    def save path = Dir.pwd, format = :yml
       name = @name.to_s != '' ? @name : SecureRandom.hex(10);
       path = (path + '/' + name + '.' + format.to_s).pathify
       case format
-      when :yaml
+      when :yaml, :yml
         serialize.to_yaml.to_file(path, mode: 'w')
       when :json
         serialize.to_json.to_file(path, mode: 'w')
@@ -229,6 +228,12 @@ class TaskVault
       return task
     end
 
+    def reload args
+      args.keys_to_sym!
+      args.hpath_delete('..class')
+      process_args **args
+    end
+
     def serialize
       values = BBLib.to_hash(self).merge({class: "#{self.class}"})
       values.hash_path_delete(*ignore_on_serialize)
@@ -249,7 +254,8 @@ class TaskVault
           'start_at',
           'message_queue',
           'history',
-          'parent'
+          'parent',
+          'dependency_args'
         ]
       end
 
