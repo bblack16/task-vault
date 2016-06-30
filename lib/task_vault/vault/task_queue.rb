@@ -190,7 +190,7 @@ class TaskVault
             queue_msg "Task '#{t.name} (ID: #{t.id})' has finished and will repeat. Next eligible time is #{t.start_at}", severity: 6
           else
             move_task(t, (t.thread.value.is_a?(Exception) ? :error : :finished) )
-            queue_msg "Task '#{t.name} (ID: #{t.id})' completed with no repeat toggled. Result was (first 50 chars): #{t.value.to_s[0..50]}", severity: 6
+            queue_msg "Task '#{t.name} (ID: #{t.id})' completed with no repeat toggled. Result was (last 50 chars): #{t.value.to_s[-51..-1]}", severity: 6
           end
         end
       end
