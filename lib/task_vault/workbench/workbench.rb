@@ -49,15 +49,16 @@ class TaskVault
     end
 
     def load_cfg
-      BBLib.scan_files(@path + 'recipes/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).each do |file|
+      BBLib.scan_files(@path + 'recipes/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).map do |file|
         begin
-          add_task Task.load(file, "#{@path}/templates")
+          task = Task.load(file, "#{@path}/templates")
+          [task.name, task]
         rescue StandardError, Exception => e
           queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
           queue_msg(e, severity: 3)
+          nil
         end
-      end
-      true
+      end.reject{ |r| r.nil? }.to_h
     end
 
     protected
@@ -68,41 +69,35 @@ class TaskVault
           begin
             loop do
               start = Time.now.to_f
-
               queue_msg 'Workbench is checking for new/updated/removed tasks.', severity: 8
-
-              begin
-                load_cfg
-              rescue StandardError => e
-                queue_msg "Workbench failed to load config: #{e}", severity: 3
-              end
-
               counts = { new:0, updated:0, removed:0 }
               task_set = []
 
-              # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
-              @tasks.each do |name, t|
-                n = t.name
-                task_set.push(n)
-                if @active.include?(n) && @active[n] != t.serialize
-                  @parent.vault.cancel(n)
-                  @parent.vault.queue t
-                  @active[n] = t.serialize
-                  counts[:updated]+=1
-                elsif @active[n].nil?
-                  @parent.vault.queue t
-                  @active[n] = t.serialize
-                  counts[:new]+=1
-                end
-              end
+              begin
 
-              # Delete any tasks that are still running but have been removed from cfg.
-              @active.each do |n, s|
-                if !task_set.include?(n)
-                  @parent.vault.cancel(n)
-                  @active.delete(n)
-                  counts[:removed]+=1
+                # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
+                load_cfg.each do |n, t|
+                  task_set.push(n)
+                  if @active.include?(n) && @active[n].serialize != t.serialize
+                    @active[n].reload(t.serialize)
+                    counts[:updated]+=1
+                  elsif @active[n].nil?
+                    @parent.vault.queue t
+                    @active[n] = t
+                    counts[:new]+=1
+                  end
                 end
+
+                # Delete any tasks that are still running but have been removed from cfg.
+                @active.each do |n, s|
+                  if !task_set.include?(n)
+                    @parent.vault.cancel(n)
+                    @active.delete(n)
+                    counts[:removed]+=1
+                  end
+                end
+              rescue StandardError => e
+                queue_msg "Workbench failed to load config: #{e}: #{e.backtrace.join}", severity: 3
               end
 
               queue_msg("Workbench completed check. Currently managing #{task_set.count} tasks. #{counts.map{ |k, v| "#{v} #{k}"}.join(', ')}", severity:(counts.any?{|k,v| v > 0} ? 5 : 7))
