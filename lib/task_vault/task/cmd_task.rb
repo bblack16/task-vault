@@ -48,12 +48,12 @@ class TaskVault
         when :proc
           @cmd.is_a?(Proc) ? @cmd : nil
         when :cmd
-          cmd_proc(generate_cmd(@cmd, args))
+          cmd_proc(generate_cmd(@cmd, *args))
         when :script
           interpreter = @parent.get_interpreter(@interpreter, @cmd) rescue nil
-          cmd_proc("#{interpreter} #{generate_cmd(@cmd, args)}")
+          cmd_proc("#{interpreter} #{generate_cmd(@cmd, *args)}")
         when :eval
-          cmd_proc("#{Gem.ruby} -e \"#{@cmd.gsub("\"", "\\\"")}\" #{setup_args(args)}")
+          cmd_proc("#{Gem.ruby} -e \"#{@cmd.gsub("\"", "\\\"")}\" #{setup_args(*args)}")
         else
           nil
         end
@@ -82,9 +82,14 @@ class TaskVault
         line
       end
 
-      def generate_cmd cmd, args
-        "#{cmd} #{setup_args(args)}"
+      def generate_cmd cmd, *args
+        "#{cmd} #{setup_args(*args)}"
       end
+
+      def setup_args *args
+        args.map{ |a| a.to_s.include?(' ') ? "\"#{a}\"" : a}.join(' ')
+      end
+
 
   end
 
