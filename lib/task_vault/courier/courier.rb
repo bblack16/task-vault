@@ -7,7 +7,8 @@ class TaskVault
   class Courier < Component
     attr_reader :handlers, :interval, :path, :load_interval
 
-    # 0 is HIGHLY not recommended as it is massive overkill for message processing in most use cases
+    # 0 is HIGHLY not recommended as it is massive overkill for message processing in most cases
+    # As a general rule, the lower the interval, the higher the CPU usage
     def interval= i
       @interval = BBLib.keep_between(i, 0, nil)
     end
@@ -30,7 +31,7 @@ class TaskVault
       super()
     end
 
-    def add_handler mh, overwrite = true
+    def add mh, overwrite = true
       if @handlers.any?{ |a| a.name == mh.name }
         match = @handlers.find{ |h| h.name == mh.name }
         if overwrite && match.serialize != mh.serialize
@@ -50,7 +51,21 @@ class TaskVault
       end
     end
 
-    def load_handlers
+    alias_method :add_handler, :add
+
+    def remove name
+      @handlers.delete_if{ |h| h.name == name }
+    end
+
+    def list
+      @handlers.map{ |h| h.name }
+    end
+
+    alias_method :handler_list, :list
+
+    alias_method :remove_handler, :remove
+
+    def load
       begin
         BBLib.scan_files(@path, filter: ['*.yaml', '*.json', '*.yml'], recursive: true).each do |file|
           begin
@@ -64,7 +79,9 @@ class TaskVault
       end
     end
 
-    def save_handlers format = :json
+    alias_method :load_handlers, :load
+
+    def save format = :json
       begin
         @handlers.map do |handler|
           [handler.name, handler.save(@path)]
@@ -74,9 +91,7 @@ class TaskVault
       end
     end
 
-    def handler_list
-      @handlers.map{ |h| h.name }
-    end
+    alias_method :save_handlers, :save
 
     protected
 
