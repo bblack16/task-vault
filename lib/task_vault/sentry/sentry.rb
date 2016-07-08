@@ -62,8 +62,8 @@ class TaskVault
       end
 
       def init_thread
-        @controller.start
         @thread = Thread.new {
+          @controller.start
           queue_msg("Sentry is up and listening on port #{@port}.", severity: 6)
           loop do
             begin
