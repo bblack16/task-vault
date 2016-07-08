@@ -16,6 +16,7 @@ class TaskVault
       def init_thread
         @thread = Thread.new {
           begin
+            sleep(@interval) # To allow other components to start
             loop do
               start = Time.now.to_f
               info = {checked:0, errors: 0, success:0, failed:0}
