@@ -18,7 +18,7 @@ class TaskVault
     end
 
     def path= path
-      @path = path.to_s.gsub('\\', '/')
+      @path = path.nil? ? nil : (path.to_s + '/message_handlers/').pathify
     end
 
     def start
@@ -101,7 +101,7 @@ class TaskVault
             index = 0
             loop do
               start = Time.now.to_f
-              if @load_interval && index == 0
+              if @load_interval && index == 0 && !@path.nil?
                 queue_msg("Courier is reloading message handlers from disk...", severity: 8)
                 load_handlers
                 index = @load_interval
@@ -121,8 +121,10 @@ class TaskVault
                     details = obj.read_msg
                     details[:handlers] = [:default] if details[:handlers].empty?
                     details[:handlers].each do |h|
-                      handler = @handlers.find{ |hand| hand.name == h }
-                      handler.queue details[:msg], **details[:meta] if handler
+                      if h
+                        handler = @handlers.find{ |hand| hand.name == h }
+                        handler.queue details[:msg], **details[:meta] if handler
+                      end
                     end
                   end
                 end
