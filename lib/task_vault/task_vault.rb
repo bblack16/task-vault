@@ -10,7 +10,7 @@ require_relative "sentry/sentry"
 class TaskVault
   attr_reader :path, :vault, :workbench, :protectron, :courier, :sentry
 
-  def initialize path = Dir.pwd, start: false, key: 'bobblehead', port: 2016
+  def initialize path: Dir.pwd, start: false, key: 'bobblehead', port: 2016
     @vault = Vault.new(self)
     @workbench = Workbench.new(self)
     @courier = Courier.new(self)
@@ -21,13 +21,11 @@ class TaskVault
   end
 
   def path= path
-    path = path.to_s.gsub('\\', '/')
-    path = path[0..-2] if path.end_with?('/')
-    path = path + '/taskvault/' unless path.end_with?('/taskvault')
+    path = (path + (path.end_with?('/taskvault') ? '' : '/taskvault/')).pathify unless path.nil?
     @path = path
     @vault.path = @path
     @workbench.path = @path
-    @courier.path = @path + '/message_handlers/'
+    @courier.path = @path
   end
 
   def start
