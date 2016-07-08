@@ -9,8 +9,8 @@ class TaskVault
       @interval = BBLib.keep_between(i, 0, nil)
     end
 
-    def path= p
-      @path = p.to_s
+    def path= path
+      @path = path
     end
 
     def add_task task
@@ -69,38 +69,43 @@ class TaskVault
           begin
             loop do
               start = Time.now.to_f
-              queue_msg 'Workbench is checking for new/updated/removed tasks.', severity: 8
-              counts = { new:0, updated:0, removed:0 }
-              task_set = []
 
-              begin
+              unless @path.nil? # Workbench does not run if there is no path
 
-                # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
-                load_cfg.each do |n, t|
-                  task_set.push(n)
-                  if @active.include?(n) && @active[n].serialize != t.serialize
-                    @active[n].reload(t.serialize)
-                    counts[:updated]+=1
-                  elsif @active[n].nil?
-                    @parent.vault.queue t
-                    @active[n] = t
-                    counts[:new]+=1
+                begin
+
+                  queue_msg 'Workbench is checking for new/updated/removed tasks.', severity: 8
+                  counts = { new:0, updated:0, removed:0 }
+                  task_set = []
+
+                  # Load tasks. Checks for changes and updates any tasks that have been modified in the cfg.
+                  load_cfg.each do |n, t|
+                    task_set.push(n)
+                    if @active.include?(n) && @active[n].serialize != t.serialize
+                      @active[n].reload(t.serialize)
+                      counts[:updated]+=1
+                    elsif @active[n].nil?
+                      @parent.vault.queue t
+                      @active[n] = t
+                      counts[:new]+=1
+                    end
                   end
+
+                  # Delete any tasks that are still running but have been removed from cfg.
+                  @active.each do |n, s|
+                    if !task_set.include?(n)
+                      @parent.vault.cancel(n)
+                      @active.delete(n)
+                      counts[:removed]+=1
+                    end
+                  end
+
+                rescue StandardError => e
+                  queue_msg "Workbench failed to load config: #{e}: #{e.backtrace.join}", severity: 3
                 end
 
-                # Delete any tasks that are still running but have been removed from cfg.
-                @active.each do |n, s|
-                  if !task_set.include?(n)
-                    @parent.vault.cancel(n)
-                    @active.delete(n)
-                    counts[:removed]+=1
-                  end
-                end
-              rescue StandardError => e
-                queue_msg "Workbench failed to load config: #{e}: #{e.backtrace.join}", severity: 3
+                queue_msg("Workbench completed check. Currently managing #{task_set.count} tasks. #{counts.map{ |k, v| "#{v} #{k}"}.join(', ')}", severity:(counts.any?{|k,v| v > 0} ? 5 : 7))
               end
-
-              queue_msg("Workbench completed check. Currently managing #{task_set.count} tasks. #{counts.map{ |k, v| "#{v} #{k}"}.join(', ')}", severity:(counts.any?{|k,v| v > 0} ? 5 : 7))
 
               sleep_time = @interval - (Time.now.to_f - start)
               sleep(sleep_time < 0 ? 0 : sleep_time)
