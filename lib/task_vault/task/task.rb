@@ -260,6 +260,10 @@ class TaskVault
         ]
       end
 
+      def hide_on_inspect
+        super + [:@history]
+      end
+
       def build_proc *args, **named
         # This method should generate and return a ruby proc
         proc{ |x| 'Do something?!?!' }
