@@ -65,9 +65,7 @@ class TaskVault
             queue_msg("Task '#{@name}' has started and has a pid of #{w.pid}", severity: 6)
             o.map do |line|
               msg = process_line(line)
-              if !msg.nil?
-                queue_msg(msg, task_name: @name, task_id: @id, severity: 5)
-              end
+              queue_msg(msg, task_name: @name, task_id: @id, severity: 5) unless msg.nil?
               msg
             end.reject{ |m| m.nil? }
           end
