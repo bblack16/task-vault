@@ -10,7 +10,7 @@ class TaskVault
     end
 
     def path= path
-      @path = path
+      @path = path.to_s.pathify
     end
 
     def add_task task
@@ -37,7 +37,7 @@ class TaskVault
 
     def save default_format = :yaml
       @tasks.each do |n, t|
-        path = @path + "recipes/#{t.name}"
+        path = (@path + "/recipes/#{t.name}").pathify
         format = (File.exists?(path + '.yml') ? :yaml : (File.exists?(path + '.json') ? :json : default_format))
         if format == :yaml
           t.serialize.to_yaml.to_file(path + ".yml", mode:'w')
@@ -51,7 +51,7 @@ class TaskVault
     def load_cfg
       BBLib.scan_files(@path + 'recipes/', filter: ['*.yaml', '*.yml', '*.json'], recursive: true).map do |file|
         begin
-          task = Task.load(file, "#{@path}/templates")
+          task = Task.load(file, "#{@path}/templates".pathify)
           [task.name, task]
         rescue StandardError, Exception => e
           queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
