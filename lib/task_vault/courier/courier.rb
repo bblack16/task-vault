@@ -18,7 +18,7 @@ class TaskVault
     end
 
     def path= path
-      @path = path.nil? ? nil : (path.to_s + '/message_handlers/').pathify
+      @path = path.nil? ? nil : path.pathify
     end
 
     def start

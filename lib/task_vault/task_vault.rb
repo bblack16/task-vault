@@ -25,7 +25,7 @@ class TaskVault
     @path = path
     @vault.path = @path
     @workbench.path = @path
-    @courier.path = @path
+    @courier.path = "#{@path}/message_handlers".pathify
   end
 
   def start
@@ -37,13 +37,13 @@ class TaskVault
     running?
   end
 
-  def stop
+  def stop complete = false
     @protectron.stop
-    # @sentry.stop # For now this won't get stopped because it is essential for communication
     @workbench.stop
     @vault.stop
     sleep(1) # Hack to let courier keep processing. This will be replaced with something better.
     @courier.stop
+    @sentry.stop if complete
     !running?
   end
 

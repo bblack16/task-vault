@@ -10,7 +10,7 @@ class TaskVault
     end
 
     def path= path
-      @path = path
+      @path = path.to_s.pathify
     end
 
     def add_task task
@@ -51,7 +51,7 @@ class TaskVault
     def load_cfg
       BBLib.scan_files((@path + '/recipes/').pathify, filter: ['*.yaml', '*.yml', '*.json'], recursive: true).map do |file|
         begin
-          task = Task.load(file, "#{@path}/templates")
+          task = Task.load(file, "#{@path}/templates".pathify)
           [task.name, task]
         rescue StandardError, Exception => e
           queue_msg("Workbench failed to construct task from file '#{file}'. It will not be added to the vault. Please fix or remove it. #{e}", severity: 3)
