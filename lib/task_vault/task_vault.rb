@@ -10,7 +10,7 @@ require_relative "sentry/sentry"
 class TaskVault
   attr_reader :path, :vault, :workbench, :protectron, :courier, :sentry
 
-  def initialize path: Dir.pwd, start: false, key: 'bobblehead', port: 2016
+  def initialize path: Dir.pwd, start: false, key: 'bobblehead', port: 2016, retention: 100
     @vault = Vault.new(self)
     @workbench = Workbench.new(self)
     @courier = Courier.new(self)
@@ -18,6 +18,7 @@ class TaskVault
     @protectron = Protectron.new(self)
     self.path = path
     self.start if start
+    @vault.task_queue.retention = retention
   end
 
   def path= path

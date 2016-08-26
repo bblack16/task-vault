@@ -3,7 +3,7 @@ class TaskVault
   class TaskQueue
     attr_reader :tasks, :retention, :last_id, :interpreters, :msg_queue, :path, :parent
 
-    def initialize retention: nil, starting_id:-1, path: Dir.pwd, parent: nil
+    def initialize retention: 100, starting_id:-1, path: Dir.pwd, parent: nil
       @last_id = starting_id
       @msg_queue = []
       @interpreters = {}
@@ -73,7 +73,9 @@ class TaskVault
 
     # Removes enough completed tasks to make it down to the retention limit.
     def clean
-      if @retention then @tasks[:done].shift until @tasks[:done].size <= @retention end
+      if @retention
+        @tasks[:done].shift until @tasks[:done].size <= @retention
+      end
       nil
     end
 

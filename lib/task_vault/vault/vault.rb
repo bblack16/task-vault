@@ -22,6 +22,10 @@ class TaskVault
       @queue.queue task
     end
 
+    def task_queue
+      @queue
+    end
+
     def method_missing *args, **named
       if @queue.respond_to?(args.first)
         if named.empty?
