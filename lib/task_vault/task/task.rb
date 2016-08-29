@@ -31,7 +31,7 @@ class TaskVault
     end
 
     def queue_msg msg, **meta
-      add_history(msg, **meta)
+      # add_history(msg, **meta)
       super
     end
 
