@@ -183,7 +183,7 @@ class TaskVault
       @tasks[:ready].each do |t|
         next unless policy.include?(t.priority)
         delay = policy[t.priority]
-        t.elevate if Time.now - t.last_elevated >= delay
+        t.elevate if (Time.now - t.last_elevated >= delay rescue false)
       end
       nil
     end
