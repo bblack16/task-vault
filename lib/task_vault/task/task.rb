@@ -30,10 +30,10 @@ class TaskVault
       return @thread.alive?
     end
 
-    def queue_msg msg, **meta
-      # add_history(msg, **meta)
-      super
-    end
+    # def queue_msg msg, **meta
+    #   # add_history(msg, **meta)
+    #   super
+    # end
 
     def name= n
       @name = n.to_s
