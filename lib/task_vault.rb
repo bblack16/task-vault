@@ -1,13 +1,15 @@
-require 'json'
-require 'yaml'
-require 'bblib' if !defined?(BBLib::VERSION)
-require 'ava' if !defined?(Ava::VERSION)
-
 require_relative "task_vault/version"
-require_relative "task_vault/task_vault"
-require_relative "pipboy/pipboy"
 
+# require 'bblib'
+require_relative '../../bblib/lib/bblib'
+# require 'ava'
+require_relative '../../ava/lib/ava'
+require 'yaml'
+require 'json'
 
-class TaskVault
+require_relative 'components/_components'
+require_relative 'tasks/_tasks'
+
+module TaskVault
 
 end

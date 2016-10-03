@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in task_vault.gemspec
+# Specify your gem's dependencies in task_vault_2.gemspec
 gemspec
