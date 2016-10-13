@@ -122,6 +122,7 @@ module TaskVault
             @timer.stop
             self.status = :finished
           rescue Exception => e
+            @timer.stop
             self.status = :error
             queue_msg e
           end
