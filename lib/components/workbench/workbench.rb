@@ -17,25 +17,29 @@ module TaskVault
     end
 
     def add recipe
+      recipe = recipe.serialize if recipe.is_a?(Task)
       raise ArgumentError, "Recipes must contain a name field." unless recipe[:name]
-      if existing = @recipes[recipe[:name]]
+      if existing = @recipes[recipe[:name].to_sym]
         if existing[:recipe] != recipe
           existing[:task].reload(recipe)
           queue_msg("Task #{recipe[:name]} has been updated and reloaded.", severity: :info)
         end
       else
-        @recipes[recipe[:name]] = { recipe: recipe, task: Task.load(recipe) }
+        @recipes[recipe[:name].to_sym] = { recipe: recipe, task: Task.load(recipe.dup) }
         queue_msg("New task '#{recipe[:name]}' has been added.", severity: :info)
+        save(recipe[:name].to_sym)
       end
-      @parent.vault.add(@recipes[recipe[:name]][:task])
+      @parent.vault.add(@recipes[recipe[:name].to_sym][:task])
+      recipe[:name].to_sym
     end
 
     alias_method :add_recipe, :add
 
-    def save name, format: :yaml
-      if recipe = @recipes[name]
+    def save name, format: :yml
+      if recipe = @recipes[name.to_sym]
         task = recipe[:task]
         path = "#{@path}/recipes/#{task.name}".pathify
+        queue_msg("Saving task #{name} at #{path}.#{format}", severity: :debug)
         case format
         when :yaml, :yml
           path += '.yml'
@@ -48,23 +52,29 @@ module TaskVault
         end
         File.exists?(path)
       else
+        queue_msg("Failed to save recipe #{name} because it does not exist!", severity: :warn)
         false
       end
     end
 
     def save_all format: :yaml
+      queue_msg("Saving all recipes in workbench to #{@path}: #{@recipes.size} total.", severity: :debug)
       @recipes.each do |name, data|
         save(name, format: format)
       end
     end
 
     def remove name
-      @recipes.delete(name)
+      if @recipes.include?(name)
+        queue_msg("Removing recipe '#{name}' from Workbench.", severity: :info)
+        @recipes.delete(name)[:task].cancel
+      end
     end
 
     def delete name
       remove(name)
       BBLib::scan_files(@path, filter: ['*.json', '*.yml', '*.yaml'], recursive: true).map do |file|
+        queue_msg("Deleting recipe file on disk for '#{name}': #{file}", severity: :info)
         File.delete(file)
       end
     end
@@ -92,9 +102,12 @@ module TaskVault
         loop do
           start = Time.now
           queue_msg("Workbench is now reloading recipes from disk.", severity: :debug)
-          load_recipes
+          current_recipes = load_recipes
+          @recipes.each do |name, data|
+            remove(name) unless current_recipes.include?(name)
+          end
           sleep_time = @interval - (Time.now.to_f - start.to_f)
-          queue_msg("Workbench is finished loading recipes from disk. Next run is in #{sleep_time.to_duration}.", severity: :debug)
+          queue_msg("Workbench is finished loading recipes from disk. Currently managing #{@recipes.size} total recipes. Next run is in #{sleep_time.to_duration}.", severity: :debug)
           sleep(sleep_time < 0 ? 0 : sleep_time)
         end
       end
