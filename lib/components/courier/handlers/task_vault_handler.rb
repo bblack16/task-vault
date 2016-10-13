@@ -37,7 +37,7 @@ module TaskVault
 
       def build_message msg
         if msg.is_a?(Exception)
-          "#{msg}\n#{msg.backtrace.join('\n')}"
+          "#{msg}  -  #{msg.backtrace.join('  -  ')}"
         else
           msg.to_s
         end
@@ -46,9 +46,8 @@ module TaskVault
       def severity_check severity
         begin
           SEVERITIES.keys.find_index(severity) <= SEVERITIES.keys.find_index(@level)
+        rescue
           true
-        rescue StandardError => e
-          puts e, severity
         end
       end
 
