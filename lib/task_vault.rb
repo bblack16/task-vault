@@ -1,9 +1,7 @@
 require_relative "task_vault/version"
 
-# require 'bblib'
-require_relative '../../bblib/lib/bblib'
-# require 'ava'
-require_relative '../../ava/lib/ava'
+require 'bblib'
+require 'ava'
 require 'yaml'
 require 'json'
 
