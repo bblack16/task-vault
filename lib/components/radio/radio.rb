@@ -3,8 +3,8 @@ module TaskVault
   class Radio < Component
     after :reset, :port=, :key=
 
-    attr_int_between 0, nil, :port, default: 2016
-    attr_string :key, default: 'changeme'
+    attr_int_between 0, nil, :port, default: 2016, serialize: true, always: true
+    attr_string :key, default: 'changeme', serialize: true, always: true
     attr_reader :controller
 
     def start

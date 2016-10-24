@@ -2,9 +2,9 @@ module TaskVault
 
   class Component < BBLib::LazyClass
     attr_of Object, :parent, allow_nil: true
-    attr_array_of Symbol, :handlers, raise: true
-    attr_int_between 0, nil, :history_limit, default: 100
-    attr_int_between 0, nil, :message_limit, default: 100000
+    attr_array_of Symbol, :handlers, raise: true, serialize: true, always: true
+    attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
+    attr_int_between 0, nil, :message_limit, default: 100000, serialize: true, always: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     def start
@@ -126,10 +126,6 @@ module TaskVault
 
       def setup_defaults
         # Reserved for child classes to setup their own default variables/methods
-      end
-
-      def setup_serialize
-
       end
 
       def custom_lazy_init *args

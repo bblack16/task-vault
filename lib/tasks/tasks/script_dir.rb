@@ -2,10 +2,10 @@ module TaskVault
 
   class ScriptDir < Task
 
-    attr_valid_dir :path, allow_nil: nil
-    attr_bool :recursive, default: true
-    attr_int_between 0.001, nil, :interval, default: 10
-    attr_hash :interpreters, :script_settings
+    attr_valid_dir :path, allow_nil: nil, serialize: true, always: true
+    attr_bool :recursive, default: true, serialize: true, always: true
+    attr_int_between 0.001, nil, :interval, default: 10, serialize: true, always: true
+    attr_hash :interpreters, :script_settings, serialize: true, always: true
     attr_reader :scripts
 
     def calculate_start_time
@@ -70,15 +70,6 @@ module TaskVault
           command:   path,
           arguments: [script]
         })
-      end
-
-      def setup_serialize
-        serialize_method :path, always: true
-        serialize_method :interval, always: true
-        serialize_method :recursive, always: true
-        serialize_method :interpreters, always: true
-        serialize_method :script_settings, always: true
-        super
       end
 
   end

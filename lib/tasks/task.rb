@@ -12,16 +12,15 @@ module TaskVault
     after :calculate_start_time, :delay=, :repeat=
 
     attr_int :id
-    attr_string :name, default: ''
-    attr_valid_dir :working_dir, allow_nil: true, default: nil
-    attr_float :delay, allow_nil: true, default: 0
+    attr_string :name, default: '', serialize: true, always: true
+    attr_float :delay, allow_nil: true, default: 0, serialize: true, always: true
     attr_time :start_at, fallback: Time.now
-    attr_float_between 0, nil, :weight, default: 1
-    attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true
-    attr_int_between 0, 6, :priority, default: 3
-    attr_float_between 0, nil, :timeout, allow_nil: true, default: nil
+    attr_float_between 0, nil, :weight, default: 1, serialize: true, always: true
+    attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true, serialize: true, always: true
+    attr_int_between 0, 6, :priority, default: 3, serialize: true, always: true
+    attr_float_between 0, nil, :timeout, allow_nil: true, default: nil, serialize: true, always: true
     attr_element_of STATES, :status, default: :created, fallback: :unknown
-    attr_accessor :repeat
+    attr_of Object, :repeat, serialize: true, always: true
     attr_reader :run_count, :initial_priority, :timer
 
     def cancel
@@ -111,7 +110,6 @@ module TaskVault
         @timer            = BBLib::TaskTimer.new
         self.delay        = 0
         self.repeat       = 1
-        setup_serialize
       end
 
       def init_thread
@@ -171,19 +169,6 @@ module TaskVault
           set_time :finished, Time.now
           stop
         end
-      end
-
-      def setup_serialize
-        serialize_method :name, always: true
-        serialize_method :repeat, always: true
-        serialize_method :run_limit, always: true
-        serialize_method :timeout, always: true
-        serialize_method :delay, always: true
-        serialize_method :priority, :initial_priority, always: true
-        serialize_method :weight, always: true
-        serialize_method :history_limit, always: true
-        serialize_method :working_dir, always: true
-        super
       end
 
   end

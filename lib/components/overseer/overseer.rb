@@ -1,8 +1,8 @@
 module TaskVault
 
   class Overseer < BBLib::LazyClass
-    attr_valid_dir :path, allow_nil: true, default: Dir.pwd
-    attr_reader :components
+    attr_valid_dir :path, allow_nil: true, default: Dir.pwd, serialize: true, always: true
+    attr_hash :components, serialize: true, always: true
 
     def path= path
       @components.each do |n, c|

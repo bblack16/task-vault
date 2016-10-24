@@ -1,10 +1,10 @@
 module TaskVault
 
   class Vault < Component
-    attr_float_between 0, nil, :limit, default: 5, allow_nil: true
-    attr_float_between 0, nil, :interval, default: 0.1
-    attr_int_between 0, nil, :retention, default: 100, allow_nil: true
-    attr_valid_dir :path
+    attr_float_between 0, nil, :limit, default: 5, allow_nil: true, serialize: true, always: true
+    attr_float_between 0, nil, :interval, default: 0.1, serialize: true, always: true
+    attr_int_between 0, nil, :retention, default: 100, allow_nil: true, serialize: true, always: true
+    attr_valid_dir :path, serialize: true, always: true
     attr_reader :tasks
 
     STATUSES = {

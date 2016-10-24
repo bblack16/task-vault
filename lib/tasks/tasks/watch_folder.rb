@@ -2,10 +2,10 @@ module TaskVault
 
   class WatchFolder < Task
 
-    attr_array_of String, :paths, add_rem: true, uniq: true, default: []
-    attr_array_of String, :filter, add_rem: true, uniq: true, default: nil, allow_nil: true
-    attr_int_between 0.001, nil, :interval, default: 5
-    attr_bool :recursive, default: true
+    attr_array_of String, :paths, add_rem: true, uniq: true, default: [], serialize: true, always: true
+    attr_array_of String, :filter, add_rem: true, uniq: true, default: nil, allow_nil: true, serialize: true, always: true
+    attr_int_between 0.001, nil, :interval, default: 5, serialize: true, always: true
+    attr_bool :recursive, default: true, serialize: true, always: true
     attr_array :queue, default: []
     attr_array :processed, default: []
     attr_reader :processor
@@ -68,14 +68,6 @@ module TaskVault
           @queue.push(file)
           queue_msg("New file detected for processing (in queue #{@queue.size}): #{file}", severity: :info)
         end
-      end
-
-      def setup_serialize
-        serialize_method :paths, always: true
-        serialize_method :filter, always: true
-        serialize_method :interval, always: true
-        serialize_method :recursive, always: true
-        super
       end
 
   end

@@ -10,8 +10,8 @@ module TaskVault
       debug: 'DEBUG'
     }
 
-    attr_string :time_format, default: '%Y-%m-%d %H:%M:%S.%L'
-    attr_element_of SEVERITIES, :level, default: :debug
+    attr_string :time_format, default: '%Y-%m-%d %H:%M:%S.%L', serialize: true, always: true
+    attr_element_of SEVERITIES, :level, default: :debug, serialize: true, always: true
 
     protected
 
@@ -54,12 +54,6 @@ module TaskVault
       def build_name msg
         return nil unless msg[:name]
         "#{msg[:name]}#{msg[:id] ? " (ID #{msg[:id]})" : nil}"
-      end
-
-      def setup_serialize
-        super
-        serialize_method :time_format, always: true
-        serialize_method :level, always: true
       end
 
   end

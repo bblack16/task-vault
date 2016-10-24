@@ -3,9 +3,9 @@ require_relative 'handlers/_handlers'
 module TaskVault
 
   class Courier < Component
-    attr_valid_dir :path, allow_nil: true
-    attr_float_between 0.001, nil, :interval, default: 0.5
-    attr_int_between 1, nil, :load_interval, default: 120, allow_nil: true
+    attr_valid_dir :path, allow_nil: true, serialize: true, always: true
+    attr_float_between 0.001, nil, :interval, default: 0.5, serialize: true, always: true
+    attr_int_between 1, nil, :load_interval, default: 120, allow_nil: true, serialize: true, always: true
     attr_reader :message_handlers
 
     def start
@@ -98,6 +98,7 @@ module TaskVault
 
     def setup_defaults
       @message_handlers = { default: TaskVaultHandler.new }
+      serialize_method :message_handlers, always: true
     end
 
     def run

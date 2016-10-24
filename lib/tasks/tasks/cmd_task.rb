@@ -4,9 +4,9 @@ module TaskVault
 
   class CMDTask < Task
 
-    attr_string :command, default: ''
-    attr_valid_dir :working_directory, allow_nil: true
-    attr_array :arguments, default: []
+    attr_string :command, default: '', serialize: true, always: true
+    attr_valid_dir :working_directory, allow_nil: true, serialize: true, always: true
+    attr_array :arguments, default: [], serialize: true, always: true
 
     alias_method :cmd=, :command=
     alias_method :cmd, :command
@@ -45,13 +45,6 @@ module TaskVault
         {
           pid: (@pid rescue nil)
         }.merge(super)
-      end
-
-      def setup_serialize
-        serialize_method :command, always: true
-        serialize_method :arguments, always: true
-        serialize_method :working_directory, always: true
-        super
       end
 
   end

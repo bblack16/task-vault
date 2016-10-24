@@ -18,6 +18,7 @@ module TaskVault
 
     def add recipe
       recipe = recipe.serialize if recipe.is_a?(Task)
+      p recipe
       raise ArgumentError, "Recipes must contain a name field." unless recipe[:name]
       if existing = @recipes[recipe[:name].to_sym]
         if existing[:recipe] != recipe

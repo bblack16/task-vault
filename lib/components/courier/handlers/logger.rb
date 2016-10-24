@@ -2,10 +2,10 @@ module TaskVault
 
   class Logger < TaskVaultHandler
 
-    attr_valid_dir :path, default: Dir.pwd
-    attr_string :file_name, default: 'task_vault'
-    attr_string :extension, default: 'log'
-    attr_string :file_time_format, default: '.%y.%d'
+    attr_valid_dir :path, default: Dir.pwd, serialize: true, always: true
+    attr_string :file_name, default: 'task_vault', serialize: true, always: true
+    attr_string :extension, default: 'log', serialize: true, always: true
+    attr_string :file_time_format, default: '.%y.%d', serialize: true, always: true
 
     protected
 
@@ -17,14 +17,6 @@ module TaskVault
 
       def log_file
         [@path, "#{@file_name}#{Time.now.strftime(@file_time_format)}.#{@extension}"].join('/').pathify
-      end
-
-      def setup_serialize
-        super
-        serialize_method :path, always: true
-        serialize_method :file_name, always: true
-        serialize_method :extension, always: true
-        serialize_method :file_time_format, always: true
       end
 
   end
