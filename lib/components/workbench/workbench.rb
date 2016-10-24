@@ -1,9 +1,9 @@
 module TaskVault
 
   class Workbench < Component
-    attr_valid_dir :path, allow_nil: true
-    attr_bool :recursive, default: true
-    attr_float_between 0.001, nil, :interval, default: 60
+    attr_valid_dir :path, allow_nil: true, serialize: true, always: true
+    attr_bool :recursive, default: true, serialize: true, always: true
+    attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
     attr_reader :recipes
 
     def start
