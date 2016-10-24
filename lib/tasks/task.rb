@@ -20,8 +20,13 @@ module TaskVault
     attr_int_between 0, 6, :priority, default: 3, serialize: true, always: true
     attr_float_between 0, nil, :timeout, allow_nil: true, default: nil, serialize: true, always: true
     attr_element_of STATES, :status, default: :created, fallback: :unknown
-    attr_of Object, :repeat, serialize: true, always: true
+    attr_of [String, Fixnum, TrueClass, FalseClass], :repeat, serialize: true, always: true
+    attr_int_between 1, nil, :elevate_interval, default: nil, allow_nil: true, serialize: true, always: true
     attr_reader :run_count, :initial_priority, :timer
+
+    def self.is_task_vault_task?
+      true
+    end
 
     def cancel
       self.status = :canceled
@@ -31,6 +36,12 @@ module TaskVault
     def elevate
       @priority = BBLib::keep_between(@priority - 1, 0, 6)
       set_time :last_elevated
+    end
+
+    def elevate_check parent_interval = nil
+      interval = @elevate_interval || parent_interval
+      return unless interval
+      elevate if Time.now >= ((last_elevated || created) + interval)
     end
 
     def set_time type, time = Time.now
@@ -103,7 +114,7 @@ module TaskVault
           started:       nil,
           finished:      nil,
           last_elevated: nil,
-          created:       nil
+          created:       Time.now
         }
         @run_count        = 0
         @initial_priority = 3
