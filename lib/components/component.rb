@@ -35,8 +35,9 @@ module TaskVault
 
     def queue_msg msg, **data
       msg = {
-          msg: msg,
-          handlers: @handlers
+          msg:      msg,
+          handlers: @handlers,
+          severity: (msg.is_a?(Exception) ? :error : :info)
         }.merge(compile_msg_data(**data))
       @history.unshift(msg.dup)
       while @history.size > @history_limit
