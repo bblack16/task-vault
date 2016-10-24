@@ -4,6 +4,7 @@ module TaskVault
     attr_float_between 0, nil, :limit, default: 5, allow_nil: true, serialize: true, always: true
     attr_float_between 0, nil, :interval, default: 0.1, serialize: true, always: true
     attr_int_between 0, nil, :retention, default: 100, allow_nil: true, serialize: true, always: true
+    attr_int_between 1, nil, :elevate_interval, default: 300, allow_nil: true, serialize: true, always: true
     attr_valid_dir :path, serialize: true, always: true
     attr_reader :tasks
 
@@ -48,11 +49,13 @@ module TaskVault
       @tasks.map{ |q, t| t }.flatten
     end
 
-    def task id
+    def find id
       all_tasks.find{ |t| t.id == id }
     end
 
-    def find *ids
+    alias_method :task, :find
+
+    def find_all *ids
       all_tasks.find_all{ |t| ids.include?(t.id) }
     end
 
@@ -129,7 +132,7 @@ module TaskVault
           running: [],
           done:    []
         }
-        @last_id       = -1
+        @last_id = -1
       end
 
       def next_id
@@ -194,7 +197,11 @@ module TaskVault
       end
 
       def elevate_tasks
-
+        [@tasks[:queued], @tasks[:running]].each do |set|
+          set.each do |task|
+            task.elevate_check(@elevate_interval)
+          end
+        end
       end
 
       def check_running
@@ -209,7 +216,7 @@ module TaskVault
               move_task(task, :queued)
               queue_msg("Task #{task.id} (#{task.name}) has finished and will repeat. Next eligible run time is #{task.start_at}.", severity: (failed ? :error : :info))
             else
-              move_task(task, :finished)
+              move_task(task, (failed ? :error : :finished))
               queue_msg("Task #{task.id} (#{task.name}) has finished and will not repeat. Final status: #{task.status}.", severity: (failed ? :error : :info))
             end
           end
