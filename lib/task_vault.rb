@@ -11,20 +11,20 @@ require_relative 'tasks/_tasks'
 module TaskVault
 
   def self.registry
-    @@registry ||= Array.new
+    @@registry ||= { tasks: [], handlers: [] }
   end
 
-  singleton_class.send(:alias_method, :task_types, :registry)
-
   def self.load_registry *namespaces
-    registry.clear
+    @@registry = { tasks: [], handlers: [] }
     namespaces = [TaskVault] if namespaces.empty?
     namespaces.each do |namespace|
       namespace.constants.each do |constant|
         constant = namespace.const_get(constant.to_s)
         next if constant == TaskVault::Task
         if constant.respond_to?(:is_task_vault_task?) && constant.is_task_vault_task?
-          registry.push(constant) unless registry.include?(constant)
+          registry[:tasks].push(constant) unless registry[:tasks].include?(constant)
+        elsif constant.respond_to?(:is_task_vault_handler?) && constant.is_task_vault_handler?
+          registry[:handlers].push(constant) unless registry[:handlers].include?(constant)
         end
       end
     end

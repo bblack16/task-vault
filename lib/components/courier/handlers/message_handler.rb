@@ -13,6 +13,10 @@ module TaskVault
       @queue.unshift msg
     end
 
+    def self.is_task_vault_handler?
+      true
+    end
+
     protected
 
       def setup_defaults
