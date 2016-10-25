@@ -30,6 +30,17 @@ module TaskVault
       @components.all?{ |n, c| c.running? }
     end
 
+    def add components
+      components.each do |name, component|
+        raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::Component)
+        @components[name.to_sym] = component
+      end
+    end
+
+    def remove *components
+      components.each{ |name| @components.delete(name.to_sym) }
+    end
+
     def health
       if running?
         :green
@@ -55,9 +66,9 @@ module TaskVault
       ips = Socket.ip_address_list.map{ |i| i.ip_address }
       case version
       when 4 || :v4 || :ipv4
-        ips.reject!{|r| !(r =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) }
+        ips.reject!{ |r| !(r =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) }
       when 6 || :v6 || :ipv6
-        ips.reject!{|r| (r =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) }
+        ips.reject!{ |r| (r =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) }
       when 'all' || :all
         # nada to do
       else
@@ -92,6 +103,8 @@ module TaskVault
 
       def lazy_init *args
         named = BBLib::named_args(*args)
+        [named[:remove]].flatten.each{ |n| remove(n) } if named[:remove]
+        start if named[:start]
       end
 
   end
