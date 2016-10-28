@@ -49,10 +49,10 @@ br
                 b = task.status.to_s.title_case
             td = task.run_count
             td = task.repeat
-            td = task.timer.min.to_duration
-            td = task.timer.max.to_duration
-            td = task.timer.avg.to_duration
-            td = task.timer.last.to_duration
+            td = task.timer.min.to_duration rescue nil
+            td = task.timer.max.to_duration rescue nil
+            td = task.timer.avg.to_duration rescue nil
+            td = task.timer.last.to_duration rescue nil
             td
               - message = task.history.first[:msg].to_s rescue ''
               - message = message[0..100] + '...' if message.size > 100
