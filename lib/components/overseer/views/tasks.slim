@@ -1,0 +1,72 @@
+css:
+  .center {
+    text-align: center;
+  }
+
+- COLORS = { queued: "rgb(81, 147, 201)", ready: "rgb(163, 82, 201)", running: "rgb(83, 201, 87)", done: "rgb(201, 108, 83)"}
+
+h1.center.text_3d style='font-size: 400%; font-weight: bold;' Current Tasks
+
+.middle
+  .center Check out what is currently running on your TaskVault server.
+br
+br
+
+.middle
+  table.default
+    thead
+      tr
+        th ID
+        th Name
+        th Class
+        th Status
+        th Run Count
+        th Repeat
+        th Min
+        th Max
+        th Avg
+        th Last
+        th Last Message
+        th Next Run
+        th
+    tbody
+      - TaskVault::Overseer::Server.parent.vault.tasks.each do |bucket, tasks|
+        - next if tasks.empty?
+        /tr
+        /  td.center style="font-size: 115%; text-align: center !important; color: white; background-color: #{COLORS[bucket]}" colspan=12 == "<b>#{bucket.to_s.title_case}</b>"
+        - tasks.each do |task|
+          tr
+            td
+              a href="task/#{task.id}" = task.id
+            td
+              - if task.name.to_s.empty?
+                i unknown
+              - else
+                = task.name
+            td = task.class.to_s.sub('TaskVault::', '')
+            td
+              div.badge style="background-color: #{COLORS[bucket]}; color: white"
+                b = task.status.to_s.title_case
+            td = task.run_count
+            td = task.repeat
+            td = task.timer.min.to_duration
+            td = task.timer.max.to_duration
+            td = task.timer.avg.to_duration
+            td = task.timer.last.to_duration
+            td
+              - message = task.history.first[:msg].to_s rescue ''
+              - message = message[0..100] + '...' if message.size > 100
+              = message
+            td
+              - case bucket
+                - when :done
+                  = 'Never'
+                - when :running
+                  = 'Now'
+                - else
+                  = (task.start_at - Time.now).to_duration(stop: :sec)
+            td
+              - if bucket == :done
+                a.badge.white style="background-color: rgb(122, 32, 213); text-decoration: none !important" href="/restart/#{task.id}" Restart
+              - else
+                a.badge.white style="background-color: rgb(213, 113, 32); text-decoration: none !important" href="/cancel/#{task.id}" Cancel

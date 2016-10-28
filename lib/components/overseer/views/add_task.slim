@@ -1,0 +1,19 @@
+
+
+- if params.empty? || !params[:class]
+  h1.center.red ERROR: You must pass in a class type for your task!
+- else
+  - task = TaskVault::Task.load(params)
+  - begin
+    - details = TaskVault::Overseer::Server.parent.vault.add(task)
+    .middle
+      h1.center.green SUCCESSFULLY created your task and added it to Vault
+      a.badge.center.white.bold style='font-size: 200%; background-color: rgb(30, 162, 175); text-decoration: none !important' href="/task/#{task.id}" Go To Task
+      table.default
+        - details.each do |k, v|
+          tr
+            td = k
+            td = v
+  - rescue Exception => e
+    h2.red.center An ERROR Occurred Creating Your Task
+    p.center.bold = e.to_s

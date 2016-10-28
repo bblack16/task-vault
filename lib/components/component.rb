@@ -113,61 +113,61 @@ module TaskVault
 
     protected
 
-      def lazy_setup
-        @parent        = nil
-        @thread        = nil
-        @started       = nil
-        @stopped       = nil
-        @handlers      = [:default]
-        @message_queue = Array.new
-        @history       = Array.new
-        setup_defaults
-        serialize_method :class, :_class_s, always: true
-      end
+    def lazy_setup
+      @parent        = nil
+      @thread        = nil
+      @started       = nil
+      @stopped       = nil
+      @handlers      = [:default]
+      @message_queue = Array.new
+      @history       = Array.new
+      setup_defaults
+      serialize_method :class, :_class_s, always: true
+    end
 
-      def setup_defaults
-        # Reserved for child classes to setup their own default variables/methods
-      end
+    def setup_defaults
+      # Reserved for child classes to setup their own default variables/methods
+    end
 
-      def custom_lazy_init *args
-        named = BBLib.named_args(*args)
-        init_thread if named[:start]
-        extend PutsQueue unless named.include?(:no_puts)
-      end
+    def custom_lazy_init *args
+      named = BBLib.named_args(*args)
+      init_thread if named[:start]
+      extend PutsQueue unless named.include?(:no_puts)
+    end
 
-      def init_thread
-        # This method creates a thread and calls the run method within it.
-        # Redefine the run method to have this actually do something.
-        @thread = Thread.new{
-          begin
-            self.run
-          rescue StandardError, Exception => e
-            queue_msg("#{e}: #{e.backtrace}", severity: :fatal)
-          end
-        }
-      end
+    def init_thread
+      # This method creates a thread and calls the run method within it.
+      # Redefine the run method to have this actually do something.
+      @thread = Thread.new{
+        begin
+          self.run
+        rescue StandardError, Exception => e
+          queue_msg("#{e}: #{e.backtrace}", severity: :fatal)
+        end
+      }
+    end
 
-      def run
-        puts 'Uh oh, no one redefined me!', severity: :warn
-      end
+    def run
+      puts 'Uh oh, no one redefined me!', severity: :warn
+    end
 
-      def hide_on_inspect
-        [ :@parent, :@thread ]
-      end
+    def hide_on_inspect
+      [ :@parent, :@thread ]
+    end
 
-      def compile_msg_data **data
-        data.merge(time: Time.now, component: self.class.to_s).merge(msg_metadata)
-      end
+    def compile_msg_data **data
+      data.merge(time: Time.now, component: self.class.to_s).merge(msg_metadata)
+    end
 
-      def msg_metadata
-        # Have this return a hash. This is always merged with message payloads
-        # whenever queue_msg is called.
-        {}
-      end
+    def msg_metadata
+      # Have this return a hash. This is always merged with message payloads
+      # whenever queue_msg is called.
+      {}
+    end
 
-      def _class_s
-        self.class.to_s
-      end
+    def _class_s
+      self.class.to_s
+    end
 
   end
 

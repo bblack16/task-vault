@@ -1,0 +1,21 @@
+css:
+  .menu {
+    position: absolute;
+    top: 50px;
+    left: 0px;
+  }
+.menu
+  table.default
+    tr
+      td
+        a href='/' Home
+    - if TaskVault::Overseer::Server.parent.components.include?(:vault)
+      tr
+        td
+          a href='/tasks' View Tasks
+      tr
+        td
+          a href='/add_task' Add Task
+    tr
+      td
+        a href='/logs' View Logs

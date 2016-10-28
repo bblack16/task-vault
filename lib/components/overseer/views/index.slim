@@ -1,0 +1,43 @@
+css:
+  .center {
+    text-align: center;
+  }
+
+- message = ['You ain\'t seen nothin\' yet!', 'Now 1000 times faster than before!', 'Complete sentience coming in version 2.0', 'Overseeing your tasks since 2016', 'If it ain\'t broke, go break it!', 'Now go forth and break things!', 'Have a good stay.', 'Kick your feet up and relax.', 'Enjoy!', 'Please ignore the bugs, an exterminator has been called.', 'You know, for tasks!', 'Just by using this, your cool factor tripled.', 'Your new best friend as arrived.', 'Click happy users need not apply.']
+
+h1.center.text_3d style='font-size: 400%; font-weight: bold;' Welcome to TaskVault
+.middle
+  p.center style='font-size: 85%;'
+    | This is the first build of the experimental new component called
+      Overseer.
+  p.center style='font-size: 85%;'
+    | Overseer provides a web front end to any TaskVault installation and is
+      very much a work in progress.
+  p.center.bold style="font-size: 125%;" = message.sample
+
+.middle
+  table.default
+    thead
+      tr
+        th Component
+        th Name
+        th Status
+        th Uptime
+        th
+    tbody
+      - TaskVault::Overseer::Server.parent.components.each do |name, component|
+        tr
+          td = component.class.to_s.sub('TaskVault::', '')
+          td = name
+          td
+            .bold.badge.white style="background-color: #{component.running? ? 'rgb(29, 208, 58)' : 'rgb(218, 37, 37)'}" = component.running? ? 'Up' : 'Down'
+          td = component.uptime.to_duration(stop: :sec)
+          td
+            - if component.class == TaskVault::Overseer
+              '
+            - elsif component.running?
+              a.badge.white style="background-color: rgb(199, 74, 74); text-decoration: none !important" href="/stop/#{name}" Stop
+              '&nbsp;
+              a.badge.white style="background-color: rgb(144, 74, 199); text-decoration: none !important" href="/restart/#{name}" Restart
+            - else
+              a.badge.white style="background-color: rgb(76, 199, 74); text-decoration: none !important" href="/start/#{name}" Start

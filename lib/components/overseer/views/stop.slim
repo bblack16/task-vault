@@ -1,0 +1,12 @@
+
+- component = TaskVault::Overseer::Server.parent.components[params[:name].to_sym]
+
+- if component
+  - if component.stop
+    .center.green SUCCESSFULLY stopped component '#{params[:name]}'
+  - else
+    .center.red FAILED to stop #{params[:name]}
+- else
+  .center.red ERROR: No component found named '#{params[:name]}'
+
+== slim :index

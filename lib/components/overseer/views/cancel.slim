@@ -1,0 +1,13 @@
+
+
+- task = TaskVault::Overseer::Server.parent.vault.task(params[:id].to_i)
+
+- if task
+  - task.cancel
+  - if task.status == :canceled
+    h2.green.center SUCCESSFULLY Canceled Task #{task.id} (#{task.name})
+  - else
+    h2.red.center FAILED to cancel task #{task.id} (#{task.name})
+- else
+
+  h2.red.center ERROR: Unable to locate task with ID #{params[:id]}

@@ -1,0 +1,29 @@
+- colors = { debug: 'rgb(76, 205, 194)', info: 'rgb(76, 135, 205)', warn: 'rgb(205, 192, 76)', error: 'rgb(205, 146, 76)', fatal: 'rgb(205, 76, 76)', nil => 'rgb(156, 76, 205)'}
+
+- logs = TaskVault::Overseer::Server.parent.components.map{ |n, c| c.history }.flatten
+- if params[:tasks]
+  - logs += TaskVault::Overseer::Server.parent.vault.all_tasks.map{ |t| t.history }.flatten
+- logs.sort_by!{ |h| h[:time] }.reverse!
+
+h1.center.text_3d style='font-size: 400%; font-weight: bold;' Logs
+p.center Here are all of the log messages for all running components in TaskVault
+br
+.middle
+  - unless params[:tasks]
+    a.center.white href='?tasks=true' Click Here To Include Tasks
+  br
+  table.default
+    thead
+      tr
+        th Time
+        th Severity
+        th Component
+        th Message
+    tbody
+      - logs.each do |line|
+        tr
+          td == line[:time].strftime('%Y-%m-%d %H:%M:%S') + ' <br><i>' + (Time.now - line[:time]).to_duration(stop: :sec) + ' ago</i>' rescue line[:time]
+          td
+            .badge.white.bold style="background-color: #{colors[line[:severity]]}" = line[:severity]
+          td = line[:component].to_s.sub('TaskVault::', '')
+          td = line[:msg]
