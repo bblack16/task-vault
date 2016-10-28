@@ -45,8 +45,14 @@ css:
 
   body {
     font-family:Arial, Helvetica, sans-serif;
-    background-color: #1c2d33;
-    color: rgba(255, 255, 255, 0.75);
+    /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#d6d6d6+38,ffffff+80 */
+    background: rgb(214,214,214); /* Old browsers */
+    background: -moz-linear-gradient(top,  rgba(214,214,214,1) 38%, rgba(255,255,255,1) 80%); /* FF3.6-15 */
+    background: -webkit-linear-gradient(top,  rgba(214,214,214,1) 38%,rgba(255,255,255,1) 80%); /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom,  rgba(214,214,214,1) 38%,rgba(255,255,255,1) 80%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#d6d6d6', endColorstr='#ffffff',GradientType=0 ); /* IE6-9 */
+
+    color: rgba(38, 38, 38, 1);
     font-weight: 200;
   }
 
@@ -82,8 +88,8 @@ css:
   .badge {
     border-radius: 5px;
     height: 25px;
-    padding-left: 5px;
-    padding-right: 5px;
+    padding-left: 7px;
+    padding-right: 7px;
     padding-top: 5px;
     text-align: center;
     vertical-align: middle;
@@ -99,7 +105,7 @@ css:
 doctype html
 html
   head
-    title My Slim Templates App
+    title TaskVault
   body
     == slim :menu
     #content

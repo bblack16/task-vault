@@ -4,8 +4,38 @@ css:
     top: 50px;
     left: 0px;
   }
+
+  table.main_menu {
+    border: 2px solid black;
+    box-shadow: 2px 4px 10px grey;
+  }
+
+  table.main_menu td {
+    border: 1px solid black;
+    background-color: rgb(250, 250, 255);
+    color: black;
+    padding: 10px;
+    text-align: center;
+    width: 100px;
+    height: 100%;
+  }
+
+  table.main_menu td a {
+    text-decoration: none !important;
+    color: black;
+    font-weight: bold;
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  table.main_menu td:hover {
+    background-color: rgb(123, 147, 219);
+    cursor: pointer;
+  }
+
 .menu
-  table.default
+  table.main_menu
     tr
       td
         a href='/' Home

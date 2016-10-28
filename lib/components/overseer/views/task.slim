@@ -9,7 +9,7 @@ css:
 
 - if task
   - name = task.name.to_s.empty? ? '<i>Not Named</i>' : task.name
-  h1.center.text_3d style='font-size: 400%; font-weight: bold;' == "Task: #{name}"
+  h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' == "Task: #{name}"
   h4.center = "ID: #{task.id} - Status: #{task.status}"
 
   br

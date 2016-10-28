@@ -5,12 +5,15 @@
   - logs += TaskVault::Overseer::Server.parent.vault.all_tasks.map{ |t| t.history }.flatten
 - logs.sort_by!{ |h| h[:time] }.reverse!
 
-h1.center.text_3d style='font-size: 400%; font-weight: bold;' Logs
-p.center Here are all of the log messages for all running components in TaskVault
+h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' Logs
+p.center Here are all of the log messages for all running components in TaskVault. You can display tasks along with other components by clicking the button below.
+
 br
 .middle
-  - unless params[:tasks]
-    a.center.white href='?tasks=true' Click Here To Include Tasks
+  - if params[:tasks]
+    a.center.badge.white.bold style="text-decoration: none !important; background-color: rgb(77, 172, 39)" href='/logs' Click Here To Remove Tasks
+  - else
+    a.center.badge.white.bold style="text-decoration: none !important; background-color: rgb(39, 116, 172)" href='?tasks=true' Click Here To Include Tasks
   br
   table.default
     thead
