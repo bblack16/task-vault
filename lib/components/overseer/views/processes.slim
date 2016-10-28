@@ -1,0 +1,27 @@
+- processes = BBLib::OS.processes
+
+h1.center.text_3d style='font-size: 400%; font-weight: bold;' == "Processes On Server (Host)"
+p.center = "There are currently #{processes.size} processes running."
+br
+br
+.middle
+  table.default
+    thead
+      tr
+        th PID
+        th Name
+        th User
+        th CPU
+        th Mem
+        th style="width: 300px" Cmdline
+    tbody
+      - processes.each do |process|
+        tr
+          - cmd = process[:cmd].to_s
+          - cmd = cmd[0..125] + '...' if cmd.size > 125
+          td = process[:pid]
+          td = process[:name]
+          td = process[:user]
+          td = process[:cpu].to_f.round(0)
+          td = process[:mem].to_f.round(0)
+          td title="#{process[:cmd]}" = cmd

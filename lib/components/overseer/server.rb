@@ -49,6 +49,10 @@ module TaskVault
       slim :logs
     end
 
+    get '/processes' do
+      slim :processes
+    end
+
   end
 
 end

@@ -106,4 +106,4 @@ html
       == yield
     br
     br
-    #footer.center.white.bold = "TaskVault (version #{TaskVault::VERSION})"
+    #footer.center.white.bold = "TaskVault (version #{TaskVault::VERSION})   -   Health: #{TaskVault::Overseer::Server.parent.health}"
