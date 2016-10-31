@@ -1,5 +1,7 @@
 require_relative "task_vault/version"
 
+require 'opal'
+require 'opal-jquery'
 require 'bblib' unless defined?(BBLib::VERSION)
 require 'ava' unless defined?(Ava::VERSION)
 require 'yaml'

@@ -7,7 +7,4 @@ require_relative 'workbench/workbench'
 require_relative 'sentry/sentry'
 require_relative 'radio/radio'
 require_relative 'client/client'
-
-if (require 'sinatra/base' rescue false)
-  require_relative 'overseer/overseer'
-end
+require_relative 'overseer/overseer'

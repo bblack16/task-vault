@@ -2,6 +2,8 @@ css:
   .center {
     text-align: center;
   }
+
+script src="/assets/root.js"
 - colors = { green: "rgb(103, 210, 72)", yellow: "rgb(210, 188, 73)", red: "rgb(210, 73, 73)"}
 - message = ['Tasks are our business...and business is booming!', 'I must be fed new tasks daily to survive.', 'Hey, you. Yeah, you. Go add some tasks!', 'You ain\'t seen nothin\' yet!', 'Now 1000 times faster than before!', 'Complete sentience coming in version 2.0', 'Overseeing your tasks since 2016', 'If it ain\'t broke, don\'t touch it. No really, leave it alone.', 'Now go forth and break things!', 'Have a good stay.', 'Kick your feet up and relax.', 'Enjoy!', 'Please ignore the bugs, an exterminator has already been dispatched.', 'You know, for tasks!', 'Just by using this, your cool factor tripled.', 'Your new best friend as arrived.', 'Click happy users need not apply.']
 
@@ -14,6 +16,8 @@ h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' Welcome to T
     | Overseer provides a web front end to any TaskVault installation and is
       very much a work in progress.
   p.center.bold style="font-size: 125%;" = message.sample
+
+
 
 .middle
   table style="width: 100%"
@@ -52,17 +56,18 @@ h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' Welcome to T
               td
                 .badge.white style="background-color: #{colors[TaskVault::Overseer::Server.parent.health]}"= TaskVault::Overseer::Server.parent.health
             tr
-              td CPU
+              td System
               td
-                - cpu = BBLib::OS.cpu_used_p
-                progress value="#{cpu}" max=100
-                div = "#{cpu}%"
-            tr
-              td Memory
-              td
-                - mem = BBLib::OS.mem_used_p.round(2)
-                progress value="#{mem}" max=100
-                div = "#{mem}%"
+                table style='width: 300px'
+                  tr
+                    td style='width: 150px'
+                      h4.center CPU
+                      canvas#cpu width=150 height=150
+                      h3.center#cpu_p 0%
+                    td style='width: 150px'
+                      h4.center Memory
+                      canvas#mem width=150 height=150
+                      h3.center#mem_p 0%
             tr
               td IP
               td = TaskVault::Overseer::Server.parent.ip_address.join(', ')

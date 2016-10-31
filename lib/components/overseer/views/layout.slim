@@ -106,10 +106,17 @@ doctype html
 html
   head
     title TaskVault
+    /== Opal::Sprockets.javascript_include_tag('application', debug: true, prefix: TaskVault::Overseer::Server.prefix, sprockets: TaskVault::Overseer::Server.sprockets )
+    script src='/assets/application.js' type="text/javascript"
+    /script src="#{env["PATH_INFO"].split('/').first}.js" type="text/javascript"
+    script type="text/javascript" Opal.modules["application"](Opal)
   body
+    #route title="#{env["PATH_INFO"]}"
     == slim :menu
     #content
       == yield
     br
     br
-    #footer.center.white.bold = "TaskVault (version #{TaskVault::VERSION})   -   Health: #{TaskVault::Overseer::Server.parent.health}"
+    #footer.center.white.bold
+      span = "TaskVault (version #{TaskVault::VERSION})   -   Health: #{TaskVault::Overseer::Server.parent.health}  -  "
+      spand#time.center Loading current time... Give me a sec...
