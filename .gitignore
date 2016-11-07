@@ -9,4 +9,4 @@
 /tmp/
 *.gem
 lib/components/overseer/public/a*
-lib/components/overseer/public/.*
+lib/components/overseer/public/*
