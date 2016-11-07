@@ -1,0 +1,20 @@
+- colors = { debug: :info, info: :primary, warn: :warning, error: :warning, fatal: :danger, nil => :secondary}
+
+.middle
+  table.data_table
+    thead
+      tr
+        th style="width: 150px" Time
+        th
+        th Severity
+        th Component
+        th Message
+    tbody
+      - @logs.each do |line|
+        tr
+          td = line[:time].strftime('%Y-%m-%d %H:%M:%S')
+          td == ' <i>' + (Time.now - line[:time]).to_duration(stop: :sec) + ' ago</i>' rescue line[:time]
+          td
+            div class="btn btn-#{colors[line[:severity]]} btn-sm" = line[:severity]
+          td = line[:component].to_s.sub('TaskVault::', '')
+          td = line[:msg]
