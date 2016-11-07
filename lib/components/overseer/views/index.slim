@@ -3,51 +3,50 @@ css:
     text-align: center;
   }
 
-script src="/assets/root.js"
+script src="/assets/javascript/root.js"
 - colors = { green: "rgb(103, 210, 72)", yellow: "rgb(210, 188, 73)", red: "rgb(210, 73, 73)"}
 - message = ['Tasks are our business...and business is booming!', 'I must be fed new tasks daily to survive.', 'Hey, you. Yeah, you. Go add some tasks!', 'You ain\'t seen nothin\' yet!', 'Now 1000 times faster than before!', 'Complete sentience coming in version 2.0', 'Overseeing your tasks since 2016', 'If it ain\'t broke, don\'t touch it. No really, leave it alone.', 'Now go forth and break things!', 'Have a good stay.', 'Kick your feet up and relax.', 'Enjoy!', 'Please ignore the bugs, an exterminator has already been dispatched.', 'You know, for tasks!', 'Just by using this, your cool factor tripled.', 'Your new best friend as arrived.', 'Click happy users need not apply.']
 
-h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' Welcome to TaskVault
-.middle
-  p.center style='font-size: 85%;'
-    | This is the first build of the experimental new component called
-      Overseer.
-  p.center style='font-size: 85%;'
-    | Overseer provides a web front end to any TaskVault installation and is
-      very much a work in progress.
-  p.center.bold style="font-size: 125%;" = message.sample
-
-
+p.center.bold style="font-size: 125%;" = message.sample
 
 .middle
   table style="width: 100%"
     tr
       td
-        table.default
+        table
           thead
             tr
-              th Component
+              th
               th Name
+              th
+              th Component
               th Status
               th Uptime
               th
           tbody
-            - TaskVault::Overseer::Server.parent.components.each do |name, component|
+            - parent.components.each do |name, component|
               tr
+                td
+                  == image_tag "components/#{name}", style: "max-width: 40px; max-height: 40px"
+                td.bold
+                  a href="/component/#{name}" = name
+                td
+                  .btn.btn-group.btn-sm role="group"
+                    a.btn.btn-primary.btn-sm href="/component/#{name}" View
+                    a.btn.btn-info.btn-sm href="/component/#{name}/settings" Edit
+                    a.btn.btn-default.btn-sm href="/component/#{name}/logs" Logs
                 td = component.class.to_s.sub('TaskVault::', '')
-                td = name
-                td
-                  .bold.badge.white style="background-color: #{component.running? ? 'rgb(29, 208, 58)' : 'rgb(218, 37, 37)'}" = component.running? ? 'Up' : 'Down'
+                td.text-center
+                  div class="btn btn-#{component.running? ? 'success' : 'danger'}" = component.running? ? 'Up' : 'Down'
                 td = component.uptime.to_duration(stop: :sec)
-                td
-                  - if component.class == TaskVault::Overseer
-                    '
-                  - elsif component.running?
-                    a.badge.white style="background-color: rgb(199, 74, 74); text-decoration: none !important" href="/stop/#{name}" Stop
-                    '&nbsp;
-                    a.badge.white style="background-color: rgb(144, 74, 199); text-decoration: none !important" href="/restart/#{name}" Restart
-                  - else
-                    a.badge.white style="background-color: rgb(76, 199, 74); text-decoration: none !important" href="/start/#{name}" Start
+                td.text-center
+                  .btn.btn-group.btn-sm role="group"
+                    - if component.running?
+                        a.btn.btn-danger.btn-sm href="/stop/#{name}" Stop
+                        '&nbsp;
+                        a.btn.btn-warning.btn-sm href="/restart/#{name}" Restart
+                    - else
+                      a.btn.btn-success.btn-sm href="/start/#{name}" Start
       td style="vertical-align: top"
         table.default
           tbody

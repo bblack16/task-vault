@@ -1,7 +1,7 @@
+# frozen_string_literal: true
 require_relative 'handlers/_handlers'
 
 module TaskVault
-
   class Courier < Component
     attr_valid_dir :path, allow_nil: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.5, serialize: true, always: true
@@ -9,20 +9,20 @@ module TaskVault
     attr_reader :message_handlers
 
     def start
-      queue_msg("Starting up component.", severity: :info)
-      @message_handlers.all?{ |n, mh| mh.start } && super
+      queue_msg('Starting up component.', severity: :info)
+      @message_handlers.all? { |_n, mh| mh.start } && super
     end
 
     def stop
-      queue_msg("Stopping component.", severity: :info)
-      sleep(BBLib::keep_between(@interval, 0, 2))
+      queue_msg('Stopping component.', severity: :info)
+      sleep(BBLib.keep_between(@interval, 0, 2))
       super
-      @message_handlers.all?{ |n, mh| mh.stop }
+      @message_handlers.all? { |_n, mh| mh.stop }
     end
 
-    def add handler
+    def add(handler)
       raise ArgumentError, "Invalid object type passed as message handler: #{handler.class}." unless handler.is_a?(MessageHandler)
-      if match = @message_handlers.find{ |n, mh| n == handler.name }
+      if match = @message_handlers.find { |n, _mh| n == handler.name }
         match = match[1]
         if match.serialize != handler.serialize
           match.stop
@@ -38,12 +38,12 @@ module TaskVault
       end
     end
 
-    alias_method :add_msg_handler, :add
-    alias_method :add_message_handler, :add
+    alias add_msg_handler add
+    alias add_message_handler add
 
-    def remove name
+    def remove(name)
       handler = @message_handlers.delete(name)
-      handler.stop if handler
+      handler&.stop
       handler
     end
 
@@ -51,11 +51,11 @@ module TaskVault
       @message_handlers.keys
     end
 
-    def has_handler? name
+    def has_handler?(name)
       @message_handlers.include?(name)
     end
 
-    def save name, format: :yaml
+    def save(name, format: :yaml)
       if handler = @message_handlers[name]
         path = "#{@path}/message_handlers/#{name}".pathify
         case format
@@ -68,30 +68,32 @@ module TaskVault
         else
           raise ArgumentError, "Invalid format '#{format}'. Must be :yaml or :json."
         end
-        File.exists?(path)
+        File.exist?(path)
       else
         false
       end
     end
 
-    def save_all format: :yaml
-      @handlers.all? do |name, data|
-        save(name, format: format) rescue false
+    def save_all(format: :yaml)
+      @handlers.all? do |name, _data|
+        begin
+          save(name, format: format)
+        rescue
+          false
+        end
       end
     end
 
     def reload
-      begin
-        BBLib.scan_files(@path, filter: ['*.json', '*.yml', '*.yaml'], recursive: @recursive).each do |file|
-          begin
-            add(MessageHandler.load(file))
-          rescue StandardError => e
-            queue_msg(e, severity: :error)
-          end
+      BBLib.scan_files(@path, '*.json', '*.yml', '*.yaml', recursive: @recursive).each do |file|
+        begin
+          add(MessageHandler.load(file))
+        rescue StandardError => e
+          queue_msg(e, severity: :error)
         end
-      rescue StandardError => e
-        queue_msg(e, severity: :error)
       end
+    rescue StandardError => e
+      queue_msg(e, severity: :error)
     end
 
     protected
@@ -105,9 +107,12 @@ module TaskVault
       index = 0
       loop do
         start = Time.now
-        if @load_interval && index == 0 && @path
+        if @load_interval && index.zero? && @path
           # LOAD message handlers from disk
-          queue_msg("Reloading message handlers from disk @ #{@path}: current total = #{@message_handlers.size}", severity: :debug)
+          queue_msg(
+            "Reloading message handlers from disk @ #{@path}: current total = #{@message_handlers.size}",
+            severity: :debug
+          )
           reload
           queue_msg("Finished reloading message handlers: current total = #{@message_handlers.size}", severity: :debug)
           index = @load_interval.to_i
@@ -137,7 +142,5 @@ module TaskVault
         sleep(sleep_time <= 0 ? 0 : sleep_time)
       end
     end
-
   end
-
 end

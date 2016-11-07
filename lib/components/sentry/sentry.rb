@@ -1,56 +1,53 @@
+# frozen_string_literal: true
 module TaskVault
-
   class Sentry < Component
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
-
+    attr_float_between 0, nil, :initial_delay, default: 15, serialize: true, always: true
     def start
-      queue_msg("Starting up component.", severity: :info)
+      queue_msg('Starting up component.', severity: :info)
       super
     end
 
     def stop
-      queue_msg("Stopping component.", severity: :info)
+      queue_msg('Stopping component.', severity: :info)
       super
     end
 
     protected
 
-      def run
-        loop do
-          sleep(5)
-          start = Time.now
-          info = { checked: 0, errors: 0, success: 0, failed: 0 }
-          queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: :debug)
-          [@parent.components, @parent.courier.message_handlers].each do |component_set|
-            component_set.each do |name, component|
-              info[:checked] += 1
-              unless component.running?
-                queue_msg("Sentry found #{name} in an inactive state. Attempting to restart it now.", severity: :warn)
-                info[:errors] += 1
-                component.restart
-                sleep(0.5)
-                if component.running?
-                  queue_msg("Sentry successfully restarted #{name}.", severity: :warn)
-                  info[:success] += 1
-                else
-                  queue_msg("Sentry was unable to restart #{name}.", severity: :error)
-                  info[:failed] += 1
-                end
-              end
+    def run
+      sleep(@initial_delay)
+      loop do
+        start = Time.now
+        info = { checked: 0, errors: 0, success: 0, failed: 0 }
+        queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: :debug)
+        [@parent.components, @parent.courier.message_handlers].each do |component_set|
+          component_set.each do |name, component|
+            info[:checked] += 1
+            next if component.running?
+            queue_msg("Sentry found #{name} in an inactive state. Attempting to restart it now.", severity: :warn)
+            info[:errors] += 1
+            component.restart
+            sleep(0.5)
+            if component.running?
+              queue_msg("Sentry successfully restarted #{name}.", severity: :warn)
+              info[:success] += 1
+            else
+              queue_msg("Sentry was unable to restart #{name}.", severity: :error)
+              info[:failed] += 1
             end
           end
-
-          sleep_time = @interval - (Time.now.to_f - start.to_f)
-          queue_msg(
-          "Sentry finished checking #{info[:checked]} components. Final state: #{@parent.health}." +
-          (info[:errors] > 0 ? " There were errors with #{info[:errors]} component#{info[:errors] > 1 ? 's:' : nil} #{info[:success]} were successfully restarted, #{info[:failed]} failed to restart." : '' ) +
-          " Next run is in #{sleep_time.to_duration}.",
-          severity: (info[:errors] && info[:failed] > 0 ? :error : ( info[:errors] > 0 ? :warn : :info ) )
-          )
-          sleep(sleep_time < 0 ? 0 : sleep_time)
         end
+
+        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        queue_msg(
+          "Sentry finished checking #{info[:checked]} components. Final state: #{@parent.health}." +
+          (info[:errors].positive? ? " There were errors with #{info[:errors]} component#{info[:errors] > 1 ? 's:' : nil} #{info[:success]} were successfully restarted, #{info[:failed]} failed to restart." : '') +
+          " Next run is in #{sleep_time.to_duration}.",
+          severity: (info[:errors] && info[:failed].positive? ? :error : (info[:errors].positive? ? :warn : :info))
+        )
+        sleep(sleep_time.negative? ? 0 : sleep_time)
       end
-
+    end
   end
-
 end

@@ -1,10 +1,10 @@
+# frozen_string_literal: true
 module TaskVault
-
   class Component < BBLib::LazyClass
     attr_of Object, :parent, allow_nil: true
     attr_array_of Symbol, :handlers, raise: true, serialize: true, always: true
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
-    attr_int_between 0, nil, :message_limit, default: 100000, serialize: true, always: true
+    attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     def start
@@ -15,7 +15,7 @@ module TaskVault
 
     def stop
       @stopped = Time.now if running?
-      @thread.kill if @thread
+      @thread&.kill
       sleep(0.2)
       !running?
     end
@@ -29,27 +29,22 @@ module TaskVault
     end
 
     def uptime
-      return 0 if @started.nil?
-      running? ? Time.now - @started : 0
+      running? && @started ? Time.now - @started : 0
     end
 
-    def queue_msg msg, **data
+    def queue_msg(msg, **data)
       msg = {
-          msg:      msg,
-          handlers: @handlers,
-          severity: (msg.is_a?(Exception) ? :error : :info)
-        }.merge(compile_msg_data(**data))
+        msg:      msg,
+        handlers: @handlers,
+        severity: (msg.is_a?(Exception) ? :error : :info)
+      }.merge(compile_msg_data(**data))
       @history.unshift(msg.dup)
-      while @history.size > @history_limit
-        @history.pop
-      end
+      @history.pop while @history.size > @history_limit
       @message_queue.push(msg)
-      while @message_queue.size > @message_limit
-        @message_queue.shift
-      end
+      @message_queue.shift while @message_queue.size > @message_limit
     end
 
-    alias_method :queue_message, :queue_msg
+    alias queue_message queue_msg
 
     def read_msg
       @message_queue.shift
@@ -64,20 +59,20 @@ module TaskVault
     end
 
     def has_msg?
-      @message_queue.size > 0
+      !@message_queue.empty?
     end
 
-    # Custom inspect to able to hide unwanted variables or pointers
+    # Custom inspect to able to hide unwanted variables
     def inspect
-      vars = self.instance_variables.map do |v|
+      vars = instance_variables.map do |v|
         "#{v}=#{instance_variable_get(v).inspect}" unless hide_on_inspect.include?(v)
-      end.reject(&:nil?).join(", ")
-      "<#{self.class}:0x#{self.object_id} #{vars}>"
+      end.compact.join(', ')
+      "<#{self.class}:0x#{object_id} #{vars}>"
     end
 
-    def save path = Dir.pwd, format: :yml, name: _class_s
-      file_name = name || SecureRandom.hex(6);
-      path = "#{path}/#{file_name}.#{format.to_s}".pathify
+    def save(path = Dir.pwd, format: :yml, name: _class_s)
+      file_name = name || SecureRandom.hex(6)
+      path = "#{path}/#{file_name}.#{format}".pathify
       case format
       when :yaml, :yml
         serialize.to_yaml.to_file(path, mode: 'w')
@@ -87,10 +82,10 @@ module TaskVault
       path
     end
 
-    def self.load data, parent: nil
+    def self.load(data, parent: nil)
       return data if data.is_a?(self)
       if data.is_a?(String)
-        if data.end_with?('.yml') || data.end_with?('.yaml')
+        if data.end_with?('.yml', '.yaml')
           data = YMAL.load_file(data)
         elsif data.end_with?('.json')
           data = JSON.parse(File.read(data))
@@ -101,14 +96,14 @@ module TaskVault
       data[:parent] = parent
       klass = data[:class].to_s
       obj = TaskVault.constants.include?(klass.to_sym) ? TaskVault : Object
-      unless obj.const_get(klass).ancestors.any?{ |a| a == self }
+      unless obj.const_get(klass).ancestors.any? { |a| a == self }
         raise "Invalid class #{klass}. Must be a subclass of #{self}."
       end
       obj.const_get(klass).new(data)
     end
 
     def history_msgs
-      @history.map{ |h| h[:msg] }
+      @history.map { |h| h[:msg] }
     end
 
     protected
@@ -119,8 +114,8 @@ module TaskVault
       @started       = nil
       @stopped       = nil
       @handlers      = [:default]
-      @message_queue = Array.new
-      @history       = Array.new
+      @message_queue = []
+      @history       = []
       setup_defaults
       serialize_method :class, :_class_s, always: true
     end
@@ -129,7 +124,7 @@ module TaskVault
       # Reserved for child classes to setup their own default variables/methods
     end
 
-    def custom_lazy_init *args
+    def custom_lazy_init(*args)
       named = BBLib.named_args(*args)
       init_thread if named[:start]
       extend PutsQueue unless named.include?(:no_puts)
@@ -138,13 +133,13 @@ module TaskVault
     def init_thread
       # This method creates a thread and calls the run method within it.
       # Redefine the run method to have this actually do something.
-      @thread = Thread.new{
+      @thread = Thread.new do
         begin
-          self.run
-        rescue StandardError, Exception => e
+          run
+        rescue => e
           queue_msg("#{e}: #{e.backtrace}", severity: :fatal)
         end
-      }
+      end
     end
 
     def run
@@ -152,10 +147,10 @@ module TaskVault
     end
 
     def hide_on_inspect
-      [ :@parent, :@thread ]
+      [:@parent, :@thread]
     end
 
-    def compile_msg_data **data
+    def compile_msg_data(**data)
       data.merge(time: Time.now, component: self.class.to_s).merge(msg_metadata)
     end
 
@@ -168,7 +163,5 @@ module TaskVault
     def _class_s
       self.class.to_s
     end
-
   end
-
 end

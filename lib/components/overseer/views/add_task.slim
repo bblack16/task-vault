@@ -18,3 +18,7 @@
   - rescue Exception => e
     h2.red.center An ERROR Occurred Creating Your Task
     p.center.bold = e.to_s
+
+select name="tasks"
+  - TaskVault.registry[:tasks].each do |k|
+    option value="k" = "#{k}".gsub('TaskVault::', '')

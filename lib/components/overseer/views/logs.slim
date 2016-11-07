@@ -1,8 +1,8 @@
-- colors = { debug: 'rgb(76, 205, 194)', info: 'rgb(76, 135, 205)', warn: 'rgb(227, 207, 26)', error: 'rgb(249, 137, 4)', fatal: 'rgb(205, 76, 76)', nil => 'rgb(156, 76, 205)'}
+- colors = { debug: :info, info: :primary, warn: :warning, error: :warning, fatal: :danger, nil => :secondary}
 
-- logs = TaskVault::Overseer::Server.parent.components.map{ |n, c| c.history }.flatten
+- logs = parent.components.map{ |n, c| c.history }.flatten
 - if params[:tasks]
-  - logs += TaskVault::Overseer::Server.parent.vault.all_tasks.map{ |t| t.history }.flatten
+  - logs += parent.vault.all_tasks.map{ |t| t.history }.flatten
 - logs.sort_by!{ |h| h[:time] }.reverse!
 
 h1.center.text_3d.white style='font-size: 400%; font-weight: bold;' Logs
@@ -11,22 +11,24 @@ p.center Here are all of the log messages for all running components in TaskVaul
 br
 .middle
   - if params[:tasks]
-    a.center.badge.white.bold style="text-decoration: none !important; background-color: rgb(77, 172, 39)" href='/logs' Click Here To Remove Tasks
+    a.center.btn.btn-secondary href='/logs' Click Here To Remove Tasks
   - else
-    a.center.badge.white.bold style="text-decoration: none !important; background-color: rgb(39, 116, 172)" href='?tasks=true' Click Here To Include Tasks
+    a.center.btn.btn-success href='?tasks=true' Click Here To Include Tasks
   br
-  table.default
+  table.data_table.table-striped.table-bordered.dt-responsive
     thead
       tr
         th style="width: 150px" Time
+        th
         th Severity
         th Component
         th Message
     tbody
       - logs.each do |line|
         tr
-          td == line[:time].strftime('%Y-%m-%d %H:%M:%S') + ' <br><i>' + (Time.now - line[:time]).to_duration(stop: :sec) + ' ago</i>' rescue line[:time]
+          td = line[:time].strftime('%Y-%m-%d %H:%M:%S')
+          td == ' <i>' + (Time.now - line[:time]).to_duration(stop: :sec) + ' ago</i>' rescue line[:time]
           td
-            .badge.white.bold style="background-color: #{colors[line[:severity]]}" = line[:severity]
+            div class="btn btn-#{colors[line[:severity]]} btn-sm" = line[:severity]
           td = line[:component].to_s.sub('TaskVault::', '')
           td = line[:msg]

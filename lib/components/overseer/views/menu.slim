@@ -1,51 +1,132 @@
 css:
   .menu {
-    position: absolute;
-    top: 50px;
-    left: 0px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    z-index: 999;
   }
 
   table.main_menu {
-    border: 2px solid black;
-    box-shadow: 2px 4px 10px grey;
+    width: 100%;
+    height: 50px;
   }
 
-  table.main_menu td {
-    border: 1px solid black;
-    background-color: rgb(250, 250, 255);
-    color: black;
-    padding: 10px;
+  table.main_menu td.bar {
+    background-color: rgb(33, 115, 145);
+    color: white;
     text-align: center;
-    width: 100px;
     height: 100%;
+    vertical-align: middle;
   }
 
-  table.main_menu td a {
+  table.main_menu td.nav {
+    background-color: rgb(33, 115, 145);
+    color: white;
+    text-align: center;
+    height: 100%;
+    vertical-align: middle;
+    min-width: 125px;
+  }
+
+  table.main_menu td.nav a {
+    color: white;
+    display: inline;
     text-decoration: none !important;
-    color: black;
     font-weight: bold;
-    display: block;
     height: 100%;
     width: 100%;
   }
 
-  table.main_menu td:hover {
-    background-color: rgb(123, 147, 219);
+  table.main_menu td.nav:hover {
+    background-color: rgb(226, 226, 226);
+    color: black;
     cursor: pointer;
   }
 
+  td.spacer {
+    width: 100%;
+  }
+
+  .brand {
+    font-size: 250%;
+    padding: 5px;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  table.sub_menu {
+    width: 100%;
+    height: 25px;
+    background-color: rgb(28, 69, 94);
+    color: white;
+  }
+
+  table.sub_menu td.nav {
+    color: white;
+    text-align: center;
+    height: 100%;
+    vertical-align: middle;
+    min-width: 100px;
+    font-weight: bold;
+  }
+
+  table.sub_menu td.nav:hover {
+    background-color: rgb(226, 226, 226);
+    color: black;
+  }
+
+  .dropdown-menu li:hover .sub-menu {
+    visibility: visible;
+  }
+
+  .dropdown-menu li.sub_drop {
+    width: 100%;
+  }
+
+  .dropdown-menu li.sub_drop a {
+    width: 100%;
+    color: black !important;
+    display: block !important;
+  }
+
+  .dropdown:hover .dropdown-menu {
+    display: block;
+   }
+
+   .sub_link:hover {
+    background-color: rgb(189, 224, 237);
+   }
+
 .menu
+  #o_alert
+    span.glyphicon.glyphicon-remove.close_alert
   table.main_menu
     tr
-      td
-        a href='/' Home
-    - if TaskVault::Overseer::Server.parent.components.include?(:vault)
-      tr
-        td
-          a href='/tasks' View Tasks
-      tr
-        td
+      td.brand.text_3d.bar  TaskVault
+      td.nav style='min-width: 55px;'
+        a href='/'
+          span.glyphicon.glyphicon-home
+      - if parent.components.include?(:vault)
+        td.nav.dropdown
+          a aria-haspopup='true' aria-expanded='false' href='/components'
+            'Components
+            span.caret
+          ul.dropdown-menu
+            - parent.components.each do |k, v|
+              li.sub_drop
+                table style='width: 100%'
+                  td == image_tag("#{k}".downcase, style: 'width: 20px; height: 20px;')
+                  td.sub_link style='width: 99%'
+                    a href="/component/#{k}" = k
+
+        td.nav
           a href='/add_task' Add Task
+      td.nav
+        a href='/logs' Logs
+      td.spacer.bar
+  table.sub_menu
     tr
-      td
-        a href='/logs' View Logs
+      td.nav Home
+      td.spacer
