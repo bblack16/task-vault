@@ -6,7 +6,7 @@ require 'reactrb'
 require 'browser'
 require 'browser/interval'
 require 'browser/delay'
-require 'javascript/vendor/chart'
+require 'chart'
 require 'javascript/vendor/datatables'
 require 'javascript/tables'
 require 'javascript/overseer'
@@ -18,6 +18,7 @@ Document.ready? do
   Tables.load_data_tables
   after(1) { Element['#time'].render(App) }
   if PARAMS[:route] == '/'
+    after(1) { Element['#components'].render(Widget) }
     Metrics.get_data
     @timer = every(5) { Metrics.get_data }
   end
@@ -28,6 +29,69 @@ class App < React::Component::Base
   before_mount { @timer = every(1) { force_update! } }
   def render
     Time.now.strftime('%H:%M:%S')
+  end
+end
+
+class Widget < React::Component::Base
+  before_mount do
+    refresh_content
+    @timer = every(5) do
+      refresh_content
+    end
+  end
+
+  def content= p
+    @content = p
+  end
+
+  def content
+    @content ||= {}
+  end
+
+  def refresh_content
+    HTTP.get('/components') do |response|
+      self.content = response.json
+      force_update!
+    end
+  end
+
+  def render
+    # div(dangerously_set_inner_HTML: { __html: content })
+    table.default do
+      thead do
+        tr do
+          th
+          th { 'Name' }
+          th { 'Status' }
+          th { 'Uptime' }
+          th
+        end
+      end
+      tbody do
+        content.each do |component|
+          tr do
+            td do
+              img(style: { width: '35px', height: '35px' }, src: "/assets/images/components/#{component[:class]}.svg".gsub('TaskVault::', '').downcase)
+            end
+            td { component[:name] }
+            td do
+              div(class: "btn btn-#{component[:running] ? 'success' : 'danger'}") { component[:running] ? 'Up' : 'Down' }
+            end
+            td { component[:uptime].to_duration }
+            td do
+              if component[:running]
+                div.btn.btn_group do
+                  a(href: "/stop/#{component[:name]}", class: 'btn btn-warning') { 'Stop' }
+                  a(href: "/restart/#{component[:name]}", class: 'btn btn-info') { 'Restart' }
+                end
+              else
+                a(href: "/start/#{component[:name]}", class: 'btn btn-default') { 'Start' }
+              end
+            end
+          end
+        end
+      end
+    end
   end
 end
 

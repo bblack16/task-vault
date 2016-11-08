@@ -97,8 +97,8 @@ html
   head
     title TaskVault
     == javascript_tag('application.js')
-    link rel="stylesheet" href="/assets/stylesheets/vendor/bootstrap"
-    link rel="stylesheet" href="/assets/stylesheets/vendor/datatables_bootstrap"
+    link rel="stylesheet" href="/assets/bootstrap"
+    link rel="stylesheet" href="/assets/datatables_bootstrap"
     script type="text/javascript" Opal.modules["javascript/application"](Opal)
   body
     #params json="#{params.to_h.merge(session[:params] || {}).merge(route: env['PATH_INFO']).to_json}"

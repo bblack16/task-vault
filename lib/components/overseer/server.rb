@@ -13,7 +13,12 @@ module TaskVault
       def self.sprockets
         @sprockets ||= Opal::Server.new do |s|
           s.append_path File.expand_path('../app', __FILE__)
-          # s.main = 'application'
+          s.append_path File.expand_path('../app/javascript', __FILE__)
+          s.append_path File.expand_path('../app/javascript/vendor', __FILE__)
+          s.append_path File.expand_path('../app/stylesheets', __FILE__)
+          s.append_path File.expand_path('../app/stylesheets/vendor', __FILE__)
+          s.append_path File.expand_path('../app/fonts', __FILE__)
+          s.main = 'application'
         end.sprockets
       end
 
@@ -21,13 +26,18 @@ module TaskVault
         @prefix ||= '/assets'
       end
 
+      def self.maps_prefix
+        @maps_prefix ||= '/__OPAL_SOURCE_MAPS__'
+      end
+
+      def self.maps_app
+        @maps_app ||= Opal::SourceMapServer.new(sprockets, maps_prefix)
+      end
+
       Opal.use_gem 'dformed'
 
-      maps_prefix = '/__OPAL_SOURCE_MAPS__'
-      maps_app    = Opal::SourceMapServer.new(sprockets, maps_prefix)
-      ::Opal::Sprockets::SourceMapHeaderPatch.inject!(maps_prefix)
-
       get maps_prefix do
+        ::Opal::Sprockets::SourceMapHeaderPatch.inject!(maps_prefix)
         maps_app.call(maps_prefix)
       end
 
@@ -36,13 +46,17 @@ module TaskVault
         TaskVault::Overseer::Server.sprockets.call(env)
       end
 
+      get '/fonts/*' do
+        redirect env['PATH_INFO'].sub('fonts', 'assets/fonts')
+      end
+
       def self.precompile!
-        BBLib.scan_files(File.expand_path('../public', __FILE__)).each do |file|
-          FileUtils.rm(file)
+        BBLib.scan_dir(File.expand_path('../public', __FILE__)).each do |file|
+          FileUtils.rm_rf(file)
         end
         environment = TaskVault::Overseer::Server.sprockets
         manifest = Sprockets::Manifest.new(environment.index, File.expand_path('../public', __FILE__))
-        manifest.compile(%w(*.css *.rb *.png *.jpg *.svg *.eot *.ttf *.woff *.woff2))
+        manifest.compile(%w(*.css application.rb javascript/*.js *.png *.jpg *.svg *.eot *.ttf *.woff *.woff2))
       end
 
       def self.parent=(parent)
@@ -219,6 +233,17 @@ module TaskVault
           session[:params] = { alert: { message: "No component by the name of #{params[:name]} could be located.", title: 'Component Not Found', severity: :error } }
           redirect(back)
         end
+      end
+
+      get '/widget/:name' do
+        slim "widgets/#{params[:name]}".to_sym, layout: false
+      end
+
+      get '/components' do
+        content_type :json
+        parent.components.map do |name, component|
+          component.serialize.merge(name: name, running: component.running?, uptime: component.uptime)
+        end.to_json
       end
 
     end

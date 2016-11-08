@@ -2,7 +2,7 @@
 module TaskVault
   class Sentry < Component
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
-    attr_float_between 0, nil, :initial_delay, default: 15, serialize: true, always: true
+    attr_float_between 0, nil, :initial_delay, default: 60, serialize: true, always: true
     def start
       queue_msg('Starting up component.', severity: :info)
       super
