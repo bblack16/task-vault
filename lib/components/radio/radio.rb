@@ -5,6 +5,7 @@ module TaskVault
 
     attr_int_between 0, nil, :port, default: 2016, serialize: true, always: true
     attr_string :key, default: 'changeme', serialize: true, always: true
+    attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true
     attr_reader :controller
 
     def start
@@ -26,7 +27,7 @@ module TaskVault
       @controller.send(*args)
     end
 
-    def respond_to_missing(method, include_private = false)
+    def respond_to_missing?(method, include_private = false)
       @controller.respond_to?(method) || super
     end
 
@@ -37,14 +38,9 @@ module TaskVault
     end
 
     def register_objects
-      @controller.register(
-        overseer:  @parent,
-        vault:     @parent.vault,
-        courier:   @parent.courier,
-        sentry:    @parent.sentry,
-        workbench: @parent.workbench,
-        radio:     self
-      )
+      { server: @parent }.merge(@parent.components).each do |name, component|
+        @controller.register(name => component) if @components.empty? || @components.include?(name)
+      end
     end
 
     def reset
