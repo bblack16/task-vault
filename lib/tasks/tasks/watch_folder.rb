@@ -22,6 +22,7 @@ module TaskVault
     end
 
     def run
+      queue_msg('Starting up watch folder...', severity: :info)
       loop do
         start = Time.now
 
