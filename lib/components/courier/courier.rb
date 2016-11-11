@@ -120,13 +120,13 @@ module TaskVault
 
         components = [
           @parent.components.values,
-          @parent.vault.all_tasks,
-          @parent.courier.message_handlers.values
+          @message_handlers.values
         ].flatten.compact
 
         components.each do |component|
           while component.has_msg?
             msg = component.read_msg
+            next unless msg
             (msg[:handlers] || [:default]).each do |handler|
               if has_handler?(handler)
                 @message_handlers[handler].push(msg)
@@ -138,8 +138,8 @@ module TaskVault
         end
 
         index -= 1 if @load_interval
-        sleep_time =  @interval - (Time.now.to_f - start.to_f)
-        sleep(sleep_time <= 0 ? 0 : sleep_time)
+        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        sleep(sleep_time.negative? ? 0 : sleep_time)
       end
     end
   end
