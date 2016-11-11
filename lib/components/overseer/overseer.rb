@@ -43,6 +43,10 @@ module TaskVault
     end
 
     def setup_assets
+      if @path.end_with?('/overseer')
+        FileUtils.rm_rf("#{@path}/views")
+        FileUtils.rm_rf("#{@path}/app")
+      end
       FileUtils.cp_r(File.expand_path('../views', __FILE__), @path)
       FileUtils.cp_r(File.expand_path('../app', __FILE__), @path)
       @parent.components.merge(__comp: Component.new).each do |name, component|

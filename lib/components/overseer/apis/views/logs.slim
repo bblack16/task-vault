@@ -1,18 +1,17 @@
 
 
-table
+table.data_table
   thead
     tr
       th Time
+      th Name
       th Status
       th Message
-      th Full
-      th
   tbody
     - @component.history.each do |line|
       tr
         td = line[:time]
+        td
+          b = line[:name]
         td = line[:severity]
         td = line[:msg]
-        td = line
-        td Bullshit

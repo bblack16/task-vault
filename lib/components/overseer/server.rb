@@ -50,14 +50,7 @@ module TaskVault
 
       Opal.use_gem 'dformed'
       def self.precompile!
-        # puts File.expand_path('../app/javascript/application.js', __FILE__)
-        # Opal.append_path File.expand_path('../app', __FILE__)
-        # Opal.append_path File.expand_path('../app/javascript', __FILE__)
-        # puts Opal::Builder.build('application').to_s
-        # Opal::Builder.build('application').to_s.to_file(File.expand_path('../app/javascript/application.js', __FILE__))
-        # BBLib.scan_dir(settings.public_folder).each do |file|
-          FileUtils.rm_rf(settings.public_folder)
-        # end
+        FileUtils.rm_rf(settings.public_folder)
         environment = TaskVault::Overseer::Server.opal.sprockets
         manifest = Sprockets::Manifest.new(environment.index, settings.public_folder)
         manifest.compile(%w(*.css application.rb javascript/*.js *.png *.jpg *.svg *.eot *.ttf *.woff *.woff2))
