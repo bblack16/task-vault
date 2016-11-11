@@ -33,6 +33,24 @@ module TaskVault
       super
     end
 
+    def read_msg
+      if @message_queue.empty?
+        all_tasks.find(&:has_msg?)&.read_msg
+      else
+        @message_queue.shift
+      end
+    end
+
+    def read_all_msgs
+      all = []
+      all.push(read_msg) while has_msg?
+      all
+    end
+
+    def has_msg?
+      !@message_queue.empty? || all_tasks.any?(&:has_msg?)
+    end
+
     def add(task)
       if existing = all_tasks.find { |t| t == task }
         return existing.details(:id, :name, :status, :start_at)
