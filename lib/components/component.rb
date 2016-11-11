@@ -2,6 +2,7 @@
 module TaskVault
   class Component < BBLib::LazyClass
     attr_of Object, :parent, allow_nil: true
+    attr_str :name, serialize: true
     attr_array_of Symbol, :handlers, raise: true, serialize: true, always: true
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
@@ -151,7 +152,7 @@ module TaskVault
     end
 
     def compile_msg_data(**data)
-      data.merge(time: Time.now, component: self.class.to_s).merge(msg_metadata)
+      data.merge(time: Time.now, component: self.class.to_s, name: name).merge(msg_metadata)
     end
 
     def msg_metadata
