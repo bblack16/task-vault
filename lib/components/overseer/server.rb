@@ -10,18 +10,6 @@ module TaskVault
       set :root, File.dirname(__FILE__)
       enable :sessions
 
-      def self.sprockets
-        @sprockets ||= Opal::Server.new do |s|
-          s.append_path File.expand_path('../app', __FILE__)
-          s.append_path File.expand_path('../app/javascript', __FILE__)
-          s.append_path File.expand_path('../app/javascript/vendor', __FILE__)
-          s.append_path File.expand_path('../app/stylesheets', __FILE__)
-          s.append_path File.expand_path('../app/stylesheets/vendor', __FILE__)
-          s.append_path File.expand_path('../app/fonts', __FILE__)
-          s.main = 'application'
-        end.sprockets
-      end
-
       def self.prefix
         @prefix ||= '/assets'
       end
@@ -34,37 +22,49 @@ module TaskVault
         @maps_app ||= Opal::SourceMapServer.new(sprockets, maps_prefix)
       end
 
-      Opal.use_gem 'dformed'
+      def self.opal
+        @opal ||= Opal::Server.new do |s|
+          s.append_path File.expand_path('../app/javascript', __FILE__)
+          s.append_path File.expand_path('../app', __FILE__)
+          s.main = File.expand_path('../app/javascript/application', __FILE__)
+        end
+      end
+
+      # get TaskVault::Overseer::Server.opal.sprockets.source_maps.prefix do
+      #   opal.source_maps.call(env)
+      # end
 
       get maps_prefix do
-        ::Opal::Sprockets::SourceMapHeaderPatch.inject!(maps_prefix)
+        # ::Opal::Sprockets::SourceMapHeaderPatch.inject!(maps_prefix)
         maps_app.call(maps_prefix)
       end
 
       get '/assets/*' do
         env['PATH_INFO'].sub!('/assets', '')
-        TaskVault::Overseer::Server.sprockets.call(env)
+        TaskVault::Overseer::Server.opal.sprockets.call(env)
       end
 
       get '/fonts/*' do
         redirect env['PATH_INFO'].sub('fonts', 'assets/fonts')
       end
 
+      Opal.use_gem 'dformed'
       def self.precompile!
-        BBLib.scan_dir(File.expand_path('../public', __FILE__)).each do |file|
-          FileUtils.rm_rf(file)
-        end
-        environment = TaskVault::Overseer::Server.sprockets
-        manifest = Sprockets::Manifest.new(environment.index, File.expand_path('../public', __FILE__))
+        # puts File.expand_path('../app/javascript/application.js', __FILE__)
+        # Opal.append_path File.expand_path('../app', __FILE__)
+        # Opal.append_path File.expand_path('../app/javascript', __FILE__)
+        # puts Opal::Builder.build('application').to_s
+        # Opal::Builder.build('application').to_s.to_file(File.expand_path('../app/javascript/application.js', __FILE__))
+        # BBLib.scan_dir(settings.public_folder).each do |file|
+          FileUtils.rm_rf(settings.public_folder)
+        # end
+        environment = TaskVault::Overseer::Server.opal.sprockets
+        manifest = Sprockets::Manifest.new(environment.index, settings.public_folder)
         manifest.compile(%w(*.css application.rb javascript/*.js *.png *.jpg *.svg *.eot *.ttf *.woff *.woff2))
       end
 
-      def self.parent=(parent)
-        @parent = parent
-      end
-
-      def self.parent
-        @parent
+      class << self
+        attr_accessor :parent, :root
       end
 
       helpers do
@@ -104,6 +104,12 @@ module TaskVault
             fallbacks.find { |f| image_tag(f, recursive: recursive, style: style) }
           end
         end
+
+        def component name = nil
+          name = env['PATH_INFO'].scan(/(?<=\/component\/).*?(?=\/|$)/).first.to_s.to_sym unless name
+          parent.components[name.to_sym]
+        end
+
       end
 
       get '/' do
@@ -116,32 +122,6 @@ module TaskVault
 
       get '/task/:id' do
         slim :task
-      end
-
-      get '/start/:name' do
-        slim :start
-      end
-
-      get '/stop/:name' do
-        slim :stop
-      end
-
-      get '/restart/:name' do
-        severity = :success
-        if component = parent.components.find { |k, _| k == params[:name].to_sym }
-          component = component[1]
-          if component.restart
-            msg = "Successfully restarted #{params[:name]}"
-          else
-            msg = "Failed to restart #{params[:name]}"
-            severity = :warning
-          end
-        else
-          msg = "No component by the name of #{params[:name]} found."
-          severity = :error
-        end
-        session[:params] = { alert: { message: msg, severity: severity, title: 'Restart' } }
-        redirect(back)
       end
 
       get '/add_task' do
@@ -177,75 +157,87 @@ module TaskVault
         end.to_json
       end
 
-      get '/component/:name' do
-        if parent.components[params[:name].to_sym]
-          @name = params[:name]
-          @component = parent.components[@name.to_sym]
-          @stats = {
-            class: @component.class,
-            uptime: @component.uptime.to_f.to_duration,
-            running: @component.running?
-          }
-          slim 'component/status'.to_sym
+      # get '/component/:name' do
+      #   if parent.components[params[:name].to_sym]
+      #     @name = params[:name]
+      #     @component = parent.components[@name.to_sym]
+      #     @stats = {
+      #       class: @component.class,
+      #       uptime: @component.uptime.to_f.to_duration,
+      #       running: @component.running?
+      #     }
+      #     slim 'component/status'.to_sym
+      #   else
+      #     session[:params] = { alert: { message: "No component by the name of #{params[:name]} could be located.", title: 'Component Not Found', severity: :error } }
+      #     redirect(back)
+      #   end
+      # end
+      #
+      post '/component/cmd/:name/:cmd' do
+        content_type :json
+        cmds = %w(start stop restart)
+        if !cmds.include?(params[:cmd])
+          { severity: :warning, message: "#{params[:cmd]} cannot be run.", title: 'Commnd Failed' }
+        elsif component = parent.components[params[:name].to_sym]
+          if component.send(params[:cmd])
+            { severity: :success, message: "#{params[:cmd]} of #{params[:name]} was successful.", title: params[:cmd].to_s }
+          else
+            { severity: :error, message: "#{params[:cmd]} of #{params[:name]} failed.", title: "#{params[:cmd]} Failed" }
+          end
         else
-          session[:params] = { alert: { message: "No component by the name of #{params[:name]} could be located.", title: 'Component Not Found', severity: :error } }
-          redirect(back)
-        end
-      end
-
-      get '/component/:name/logs' do
-        if parent.components[params[:name].to_sym]
-          @name = params[:name]
-          @component = parent.components[@name.to_sym]
-          @logs = @component.history
-          slim 'component/logs'.to_sym
-        else
-          session[:params] = { alert: { message: "No component by the name of #{params[:name]} could be located.", title: 'Component Not Found', severity: :error } }
-          redirect(back)
-        end
-      end
-
-      ATTR_FIELDS = {
-        int: :number,
-        int_between: :number,
-        float: :number,
-        string: :text,
-        array: :textarea,
-        array_of: :textarea,
-        hash: :textarea
-      }.freeze
-
-      get '/component/:name/settings' do
-        if parent.components[params[:name].to_sym]
-          @name = params[:name]
-          @component = parent.components[@name.to_sym]
-          @current = @component.serialize
-          @settings = @component.class.attrs
-          fields = @settings.flat_map do |name, data|
-            unless [:reader].any? { |i| data[:type] == i }
-              DFormed::ElementBase.create(type: :label, label: name.to_s.title_case)
-              DFormed::ElementBase.create(type: ATTR_FIELDS[data[:type]] || :text, name: name, value: @component.send(name))
-            end
-          end.compact
-          @form = DFormed::VerticalForm.new(name: 'settings', fields: fields)
-          slim 'component/settings'.to_sym
-        else
-          session[:params] = { alert: { message: "No component by the name of #{params[:name]} could be located.", title: 'Component Not Found', severity: :error } }
-          redirect(back)
-        end
+          { severity: :warning, message: "#{params[:name]} not found!", title: 'Command Failed' }
+        end.to_json
       end
 
       get '/widget/:name' do
         slim "widgets/#{params[:name]}".to_sym, layout: false
       end
 
-      get '/components' do
+      get '/api/components' do
         content_type :json
         parent.components.map do |name, component|
           component.serialize.merge(name: name, running: component.running?, uptime: component.uptime)
         end.to_json
       end
 
+      get '/api/status' do
+        content_type :json
+        parent.status.to_json
+      end
+
+      get '/api/health' do
+        content_type :json
+        { health: parent.health }.to_json
+      end
+
+      # get '/add_route/:route' do
+      #   TaskVault::Overseer::Server.get "/#{params[:route]}" do
+      #     "Hi, I'm a new route!"
+      #   end
+      #   'Added new route: ' + params[:route]
+      # end
+
+      # get '/api/component/:name/*' do
+      #   path = env['PATH_INFO'].sub("/api/component/#{params[:name]}", '')
+      #   component = parent.components[params[:name].to_sym]
+      #
+      # end
+
+      def self.refresh_routes!
+        @parent.components.each do |name, component|
+          p "#{name}"
+          component.map_apis(TaskVault::Overseer::Server, name)
+        end
+      end
+
+      get '/routes' do
+        content_type :json
+        TaskVault::Overseer::Server.routes["GET"].map do |route|
+          route[0]
+        end.to_json
+      end
+
     end
+
   end
 end

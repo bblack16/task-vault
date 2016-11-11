@@ -10,6 +10,7 @@ module Overseer
   }
 
   def self.alert title, message, severity = :success
+    hide_alert
     alert = Element['#o_alert']
     closer = Element["<span id='alert_close' class='glyphicon glyphicon-remove close_alert'></span>"]
     alert.html = "<b>#{title}:</b> #{message}"
@@ -21,6 +22,12 @@ module Overseer
 
   def self.hide_alert
     Element['#o_alert'].hide
+  end
+
+  def self.component_cmd component, cmd
+    HTTP.post("/component/cmd/#{component}/#{cmd}") do |response|
+      alert(response.json[:title], response.json[:message], response.json[:severity])
+    end
   end
 
 end
