@@ -5,6 +5,7 @@ module TaskVault
     attr_hash :components, serialize: true, always: true
 
     def path=(path)
+      @path = path
       @components.each do |_n, c|
         c.path = path if c.respond_to?(:path=)
       end
@@ -45,6 +46,7 @@ module TaskVault
       components.each do |name, component|
         raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::Component)
         component.parent = self
+        component.name = name
         @components[name.to_sym] = component
       end
     end
@@ -65,12 +67,15 @@ module TaskVault
 
     def status
       {
-        health:     health,
-        ip_address: ip_address,
-        time:       server_time,
-        running:    running?,
-        components: @components.map { |n, c| [n, { running: c.running?, uptime: c.uptime }] }.to_h,
-        handlers:   courier.message_handlers.map { |n, h| [n, { running: h.running?, uptime: h.uptime }] }.to_h
+        health:      health,
+        version:     TaskVault::VERSION,
+        ip_address:  ip_address,
+        config_path: path,
+        working_dir: Dir.pwd,
+        time:        server_time,
+        running:     running?,
+        components:  @components.map { |n, c| [n, { running: c.running?, uptime: c.uptime, class: c.class }] }.to_h
+        # handlers:    courier.message_handlers.map { |n, h| [n, { running: h.running?, uptime: h.uptime }] }.to_h
       }
     end
 
@@ -109,11 +114,11 @@ module TaskVault
 
     def lazy_setup
       @components = {
-        courier:   Courier.new(parent: self),
-        vault:     Vault.new(parent: self),
-        workbench: Workbench.new(parent: self),
-        sentry:    Sentry.new(parent: self),
-        radio:     Radio.new(parent: self)
+        courier:   Courier.new(parent: self, name: 'courier'),
+        vault:     Vault.new(parent: self, name: 'vault'),
+        workbench: Workbench.new(parent: self, name: 'workbench'),
+        sentry:    Sentry.new(parent: self, name: 'sentry'),
+        radio:     Radio.new(parent: self, name: 'radio')
       }
     end
 
