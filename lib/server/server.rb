@@ -113,13 +113,14 @@ module TaskVault
     protected
 
     def lazy_setup
-      @components = {
+      @components = {}
+      add(
         courier:   Courier.new(parent: self, name: 'courier'),
         vault:     Vault.new(parent: self, name: 'vault'),
         workbench: Workbench.new(parent: self, name: 'workbench'),
         sentry:    Sentry.new(parent: self, name: 'sentry'),
         radio:     Radio.new(parent: self, name: 'radio')
-      }
+      )
     end
 
     def lazy_init(*args)
