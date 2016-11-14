@@ -1,3 +1,4 @@
+require_relative 'tasks/_tasks'
 # frozen_string_literal: true
 module TaskVault
   class Vault < Component
@@ -53,14 +54,14 @@ module TaskVault
 
     def add(task)
       if existing = all_tasks.find { |t| t == task }
-        return existing.details(:id, :name, :status, :start_at)
+        return existing
       end
       raise ArgumentError, "Tasks of type #{task.is_a?(Hash) ? task[:class] : task.class} are blacklisted on this Vault instance." if blacklisted?(task)
       task = Task.load(task, parent: self)
       task.status = :queued
       task.id = next_id
       @tasks[:queued].push task
-      task.details(:id, :name, :status, :start_at)
+      task
     end
 
     alias add_task add
@@ -156,6 +157,26 @@ module TaskVault
       all_tasks.each do |task|
         task.handlers = *(handlers + task.handlers).flatten.uniq
       end
+    end
+
+    def self.registry
+      @registry ||= load_registry
+    end
+
+    def self.load_registry(*namespaces)
+      @registry  = []
+      registry   = []
+      namespaces = [TaskVault] if namespaces.empty?
+      namespaces.each do |namespace|
+        namespace.constants.each do |constant|
+          constant = namespace.const_get(constant.to_s)
+          next if constant == TaskVault::Task
+          if constant.respond_to?(:task_vault_task?) && constant.task_vault_task?
+            registry.push(constant) unless registry.include?(constant)
+          end
+        end
+      end
+      registry
     end
 
     protected
