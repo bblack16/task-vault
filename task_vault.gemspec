@@ -33,6 +33,4 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'bblib', "~> 0.3.1"
   spec.add_runtime_dependency 'ava', "~> 0"
-  spec.add_runtime_dependency 'hyper-react'
-  spec.add_runtime_dependency 'reactrb'
 end
