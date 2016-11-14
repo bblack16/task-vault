@@ -4,6 +4,7 @@ module TaskVault
     attr_valid_dir :path, allow_nil: true, serialize: true, always: true
     attr_bool :recursive, default: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
+    attr_sym :vault_name, default: :vault, serialize: true, always: true
     attr_reader :recipes
 
     def start
@@ -14,6 +15,10 @@ module TaskVault
     def stop
       queue_msg('Stopping component.', severity: :info)
       super
+    end
+
+    def vault
+      @parent.components[@vault_name]
     end
 
     def add(recipe)
@@ -29,7 +34,7 @@ module TaskVault
         queue_msg("New task '#{recipe[:name]}' has been added.", severity: :info)
         save(recipe[:name].to_sym)
       end
-      @parent.vault.add(@recipes[recipe[:name].to_sym][:task])
+      vault.add(@recipes[recipe[:name].to_sym][:task])
       recipe[:name].to_sym
     end
 
