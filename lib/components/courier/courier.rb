@@ -96,6 +96,25 @@ module TaskVault
       queue_msg(e, severity: :error)
     end
 
+    def self.registry
+      @registry ||= load_registry
+    end
+
+    def self.load_registry(*namespaces)
+      @registry  = []
+      registry   = []
+      namespaces = [TaskVault] if namespaces.empty?
+      namespaces.each do |namespace|
+        namespace.constants.each do |constant|
+          constant = namespace.const_get(constant.to_s)
+          if constant.respond_to?(:is_task_vault_handler?) && constant.is_task_vault_handler?
+            registry.push(constant) unless registry.include?(constant)
+          end
+        end
+      end
+      registry
+    end
+
     protected
 
     def setup_defaults
