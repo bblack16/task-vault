@@ -34,6 +34,13 @@ module TaskVault
       super
     end
 
+    def self.description
+      'If you\'ve got something that needs doin\', look no further than Vault! Vault is a task running enginge for ' \
+      'TaskVault. It manages tasks (objects inherited from TaskVault::Task) and runs them within a queue. Vault uses ' \
+      'escalation policies and a weighted queueing mechanism to ensure your tasks are run when they need to be without ' \
+      'undue stress on your system. Pop in a task and get going today!'
+    end
+
     def read_msg
       if @message_queue.empty?
         all_tasks.find(&:has_msg?)&.read_msg

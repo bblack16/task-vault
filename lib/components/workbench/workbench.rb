@@ -17,6 +17,13 @@ module TaskVault
       super
     end
 
+    def self.description
+      'Task management, made easy. Workbench works with Vault to provide a mechanism to serialize tasks ' \
+      'to disk as well as load them from disk. It also allows those saved files to be modified and make ' \
+      'changes to the currently running tasks. Be sure you have a vault in your server, ' \
+      'otherwise Workbench will get lonely.'
+    end
+
     def vault
       @parent.components[@vault_name]
     end

@@ -21,7 +21,7 @@ module TaskVault
     attr_element_of STATES, :status, default: :created, fallback: :unknown
     attr_of [String, Fixnum, TrueClass, FalseClass], :repeat, serialize: true, always: true
     attr_int_between 1, nil, :elevate_interval, default: nil, allow_nil: true, serialize: true, always: true
-    attr_reader :run_count, :initial_priority, :timer
+    attr_reader :run_count, :initial_priority, :timer, :times
 
     def self.task_vault_task?
       true

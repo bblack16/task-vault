@@ -20,6 +20,11 @@ module TaskVault
       @message_handlers.all? { |_n, mh| mh.stop }
     end
 
+    def self.description
+      'Getting things from point A to B since 2016. Courier is a message handler for TaskVault. It\'s purpose in life is to read messages from ' \
+      'from the components in the TaskVault server and pass them off to the appropriate handler. '
+    end
+
     def add(handler)
       raise ArgumentError, "Invalid object type passed as message handler: #{handler.class}." unless handler.is_a?(MessageHandler)
       if match = @message_handlers.find { |n, _mh| n == handler.name }

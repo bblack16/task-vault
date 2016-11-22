@@ -14,6 +14,11 @@ module TaskVault
       super
     end
 
+    def self.description
+      'No component left behind, that is Sentry\'s motto. Sentry checks other components on an interval to ' \
+      'ensure they are running. If a component is down, Sentry will attempt to restart it.'
+    end
+
     protected
 
     def run

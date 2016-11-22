@@ -19,6 +19,11 @@ module TaskVault
       super
     end
 
+    def self.description
+      'Remote control your TaskVault server! Radio provides a controller that can host the TaskVault server and its components over a TCP socket.' \
+      'It utilizes the Ava library to do this and can be connected to via an Ava::Client or the TaskVault::Client.'
+    end
+
     def running?
       @controller.running?
     end
