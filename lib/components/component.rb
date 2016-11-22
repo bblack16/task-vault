@@ -21,6 +21,14 @@ module TaskVault
       !running?
     end
 
+    def self.description
+      'No description yet...'
+    end
+
+    def description
+      self.class.description
+    end
+
     def restart
       stop && start
     end
@@ -87,7 +95,7 @@ module TaskVault
       return data if data.is_a?(self)
       if data.is_a?(String)
         if data.end_with?('.yml', '.yaml')
-          data = YMAL.load_file(data)
+          data = YAML.load_file(data)
         elsif data.end_with?('.json')
           data = JSON.parse(File.read(data))
         end
