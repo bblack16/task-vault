@@ -28,8 +28,18 @@ module TaskVault
     end
 
     def cancel
+      queue_msg('Cancel has been called. Task should end shortly.', severity: :info)
       self.status = :canceled
       running?
+    end
+
+    def rerun
+      return false if parent.nil? || [:created, :queued, :running, :ready, :waiting].any? { |s| s == status }
+      queue_msg('Rerun has been called. Task should begin to run again now.', severity: :info)
+      @priority = @initial_priority
+      @run_limit += 1 if @run_limit
+      @parent.rerun(id)
+      true
     end
 
     def elevate
