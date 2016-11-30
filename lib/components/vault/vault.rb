@@ -67,6 +67,7 @@ module TaskVault
       task = Task.load(task, parent: self)
       task.status = :queued
       task.id = next_id
+      task.parent = self
       @tasks[:queued].push task
       task
     end
@@ -128,7 +129,11 @@ module TaskVault
       task = task(id)
       return false unless task
       task.cancel
-      @tasks.each { |_q, t| t.delete task }
+      @tasks.flat_map { |_q, t| t.delete task }.first
+    end
+
+    def rerun(id)
+      move_task(id, :queued)
     end
 
     # Cancels all tasks
