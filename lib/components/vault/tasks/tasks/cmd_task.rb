@@ -4,7 +4,7 @@ require 'open3'
 module TaskVault
   class CMDTask < Task
     attr_string :command, default: '', serialize: true, always: true
-    attr_valid_dir :working_directory, allow_nil: true, serialize: true, always: true
+    attr_valid_dir :working_directory, allow_nil: true, serialize: true, always: true, pre_proc: proc { |x| x.to_s.empty? ? nil : x }
     attr_array :arguments, default: [], serialize: true, always: true
 
     alias cmd= command=
@@ -30,7 +30,7 @@ module TaskVault
 
     def compile_cmdline
       cmd = @arguments.map do |a|
-        if a.include?(' ') && !a.encap_with?('"')
+        if a.include?(' ') && !a.encap_by?('"')
           "\"#{a.gsub('"', '\\"')}\""
         else
           a
