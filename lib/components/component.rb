@@ -3,7 +3,7 @@ module TaskVault
   class Component < BBLib::LazyClass
     attr_of Object, :parent, allow_nil: true
     attr_str :name, serialize: true
-    attr_array_of Symbol, :handlers, raise: true, serialize: true, always: true
+    attr_array_of Symbol, :handlers, default: [:default], raise: true, serialize: true, always: true, pre_proc: proc { |x| x.map { |i| i.to_s.to_sym } }
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
