@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 module TaskVault
-  class Sentry < Component
+  class Sentry < ServerComponent
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
     attr_float_between 0, nil, :initial_delay, default: 60, serialize: true, always: true
     attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true

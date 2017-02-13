@@ -1,6 +1,6 @@
 module TaskVault
 
-  class Beacon < Component
+  class Beacon < ServerComponent
     attr_int :port, default: 2017, serialize: true, always: true
     attr_hash :connections, default: {}
 

@@ -21,14 +21,6 @@ module TaskVault
       !running?
     end
 
-    def self.description
-      'No description yet...'
-    end
-
-    def description
-      self.class.description
-    end
-
     def restart
       stop && start
     end
@@ -152,7 +144,7 @@ module TaskVault
     end
 
     def run
-      puts 'Uh oh, no one redefined me!', severity: :warn
+      queue_msg('Uh oh, no one redefined me!', severity: :warn)
     end
 
     def hide_on_inspect

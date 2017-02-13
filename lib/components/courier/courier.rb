@@ -2,7 +2,7 @@
 require_relative 'handlers/_handlers'
 
 module TaskVault
-  class Courier < Component
+  class Courier < ServerComponent
     attr_valid_dir :path, allow_nil: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.5, serialize: true, always: true
     attr_int_between 1, nil, :load_interval, default: 120, allow_nil: true, serialize: true, always: true
