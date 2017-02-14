@@ -30,7 +30,7 @@ module TaskVault
     def cancel
       queue_msg('Cancel has been called. Task should end shortly.', severity: :info)
       self.status = :canceled
-      running?
+      !running?
     end
 
     def rerun
