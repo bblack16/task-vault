@@ -129,7 +129,7 @@ module TaskVault
       task = task(id)
       return false unless task
       task.cancel
-      @tasks.flat_map { |_q, t| t.delete task }.first
+      @tasks.flat_map { |_q, t| t.delete(task) }.compact.first
     end
 
     def rerun(id)
@@ -191,6 +191,10 @@ module TaskVault
       registry
     end
 
+    def running_weight
+      @tasks[:running].inject(0) { |sum, t| sum += t.weight }
+    end
+
     protected
 
     def setup_defaults
@@ -234,10 +238,6 @@ module TaskVault
     def resort_tasks
       @tasks[:queued].sort_by! { |t| [t.priority, t.queued] }
       @tasks[:ready].sort_by! { |t| [t.priority, t.added] }
-    end
-
-    def running_weight
-      @tasks[:running].inject(0) { |sum, t| sum += t.weight }
     end
 
     def move_task(task, status)
