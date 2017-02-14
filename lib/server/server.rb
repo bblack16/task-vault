@@ -69,6 +69,8 @@ module TaskVault
       {
         health:      health,
         version:     TaskVault::VERSION,
+        hostname:    (`hostname`.chop rescue nil),
+        pid:         Process.pid,
         ip_address:  ip_address,
         config_path: path,
         working_dir: Dir.pwd,
