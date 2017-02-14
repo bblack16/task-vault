@@ -58,7 +58,7 @@ module TaskVault
         parent.components.map { |k, v| [k, v.class.to_s] }.to_h
       end
 
-      get '/components/logs' do
+      get '/logs' do
         logs = parent.components.flat_map { |_n, c| c.history }
         process_component_logs(logs)
       end
