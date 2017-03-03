@@ -64,9 +64,9 @@ module TaskVault
         return existing
       end
       raise ArgumentError, "Tasks of type #{task.is_a?(Hash) ? task[:class] : task.class} are blacklisted on this Vault instance." if blacklisted?(task)
-      task = Task.load(task, parent: self)
+      task        = Task.load(task, parent: self, namespace: Tasks)
       task.status = :queued
-      task.id = next_id
+      task.id     = next_id
       task.parent = self
       @tasks[:queued].push task
       task
@@ -172,23 +172,7 @@ module TaskVault
     end
 
     def self.registry
-      @registry ||= load_registry
-    end
-
-    def self.load_registry(*namespaces)
-      @registry  = []
-      registry   = []
-      namespaces = [TaskVault] if namespaces.empty?
-      namespaces.each do |namespace|
-        namespace.constants.each do |constant|
-          constant = namespace.const_get(constant.to_s)
-          next if constant == TaskVault::Task
-          if constant.respond_to?(:task_vault_task?) && constant.task_vault_task?
-            registry.push(constant) unless registry.include?(constant)
-          end
-        end
-      end
-      registry
+      TaskVault::Task.descendants
     end
 
     def running_weight
