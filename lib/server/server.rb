@@ -44,6 +44,7 @@ module TaskVault
 
     def add(components)
       components.each do |name, component|
+        component = Component.load(component) if component.is_a?(Hash)
         raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::Component)
         component.parent = self
         component.name = name
@@ -149,6 +150,10 @@ module TaskVault
           wasteland: Wasteland.new(parent: self, name: 'wasteland')
         )
       end
+    end
+
+    def available_components
+      TaskVault::ServerComponent.descendants
     end
 
     protected
