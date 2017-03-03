@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module TaskVault
-  class MessageHandler < Component
-    attr_symbol :name, default: :message_handler, serialize: true, always: true
+  class MessageHandler < SubComponent
+    attr_symbol :name, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.25, serialize: true, always: true
     attr_reader :queue
 
@@ -15,6 +15,10 @@ module TaskVault
 
     def self.is_task_vault_handler?
       true
+    end
+
+    def self.load(data, parent: nil, namespace: Handlers)
+      super
     end
 
     protected
@@ -42,6 +46,7 @@ module TaskVault
     end
 
     def run
+      queue_debug("Starting handler...")
       loop do
         start = Time.now.to_f
         process_message until @queue.empty?
