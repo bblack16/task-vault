@@ -7,6 +7,7 @@ module TaskVault
       attr_str :user, :pass, default: 'guest', serialize: true
       attr_str :queue, default: :task_vault, serialize: true
       attr_hash :options, default: { block: true }, serialize: true
+      attr_int :prefetch, default: nil, allow_nil: true, serialize: true
       attr_reader :connection, :channel
 
       add_alias(:rabbitmq, :rabbit_mq)
@@ -43,6 +44,7 @@ module TaskVault
         return if @channel && @channel.open?
         setup_connection unless @connection
         @channel = @connection.create_channel
+        @channel.prefetch(prefetch) if prefetch
       rescue => e
         queue_msg("Error opening channel: #{e}; #{e.backtrace.join('; ')}", severity: :error)
       end
