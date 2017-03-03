@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 module TaskVault
-  class Task < Component
+  class Task < SubComponent
     STATES = [
       :created, :queued, :ready, :running, :finished, :error, :waiting,
       :failed_dependency, :missing_dependency, :canceled, :timedout, :unknown
@@ -22,10 +22,6 @@ module TaskVault
     attr_of [String, Fixnum, TrueClass, FalseClass], :repeat, serialize: true, always: true
     attr_int_between 1, nil, :elevate_interval, default: nil, allow_nil: true, serialize: true, always: true
     attr_reader :run_count, :initial_priority, :timer, :times
-
-    def self.task_vault_task?
-      true
-    end
 
     def cancel
       queue_msg('Cancel has been called. Task should end shortly.', severity: :info)
@@ -115,6 +111,10 @@ module TaskVault
 
     def respond_to_missing?(method, include_private = false)
       @times.include?(method) || super
+    end
+
+    def self.load(data, parent: nil, namespace: Tasks)
+      super
     end
 
     protected
