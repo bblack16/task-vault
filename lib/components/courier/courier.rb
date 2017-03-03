@@ -26,6 +26,7 @@ module TaskVault
     end
 
     def add(handler)
+      handler = build_handler(handler) if handler.is_a?(Hash)
       raise ArgumentError, "Invalid object type passed as message handler: #{handler.class}." unless handler.is_a?(MessageHandler)
       if match = @message_handlers.find { |n, _mh| n == handler.name }
         match = match[1]
@@ -41,6 +42,7 @@ module TaskVault
         handler.start
         queue_msg("Added a new message handler to Courier: #{handler.name}", severity: :info)
       end
+      handler.name
     end
 
     alias add_msg_handler add
@@ -101,29 +103,45 @@ module TaskVault
       queue_msg(e, severity: :error)
     end
 
-    def self.registry
-      @registry ||= load_registry
+    def build_handler(opts)
+      if match = find_matching(opts)
+        return match
+      end
+      handler = MessageHandler.load(opts)
+      unless handler.name
+        klass = handler.class.to_s.downcase.split('::').last
+        new_name = klass.to_sym
+        i = 1
+        while has_handler?(new_name)
+          new_name = "#{klass}#{i += 1}".to_sym
+        end
+        handler.name = new_name
+      end
+      handler
     end
 
-    def self.load_registry(*namespaces)
-      @registry  = []
-      registry   = []
-      namespaces = [TaskVault] if namespaces.empty?
-      namespaces.each do |namespace|
-        namespace.constants.each do |constant|
-          constant = namespace.const_get(constant.to_s)
-          if constant.respond_to?(:is_task_vault_handler?) && constant.is_task_vault_handler?
-            registry.push(constant) unless registry.include?(constant)
+    def find_matching(opts)
+      message_handlers.values.find do |h|
+        opts.all? do |k, v|
+          if k == :class
+            h.class.to_s == k.to_s || h.class.aliases.include?(k.to_s)
+          elsif !h.respond_to?(k)
+            true
+          else
+            h.send(k) == v
           end
         end
       end
-      registry
+    end
+
+    def self.registry
+      TaskVault::MessageHandler.descendants
     end
 
     protected
 
     def setup_defaults
-      @message_handlers = { default: TaskVaultHandler.new }
+      @message_handlers = { default: Handlers::TaskVaultHandler.new }
       serialize_method :message_handlers, always: true
     end
 
