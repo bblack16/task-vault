@@ -5,18 +5,6 @@ module TaskVault
 
     after :setup_routes, :lazy_init
 
-    def routes
-      @routes ||= {}
-    end
-
-    def params
-      @params ||= {}
-    end
-
-    def params=(params)
-      @params = params
-    end
-
     protected
 
     def add_route(verb, path, &block)
@@ -41,6 +29,11 @@ module TaskVault
       add_route(:delete, path, &block)
     end
 
+    def add_sub_component_routes(sub)
+      return nil unless sub.respond_to?(:routes)
+      sub.routes
+    end
+
     def setup_routes
       get '/' do
         component.serialize.merge(
@@ -48,7 +41,7 @@ module TaskVault
           uptime:      component.uptime,
           started:     component.started,
           stopped:     component.stopped,
-          history:     component.history[0..4].map { |h| "#{h[:time]} - #{h[:severity].to_s.upcase} - #{h[:msg]}" }
+          history:     component.history[0..9].map { |h| "#{h[:time]} - #{h[:severity].to_s.upcase} - #{h[:msg]}" }
         )
       end
 

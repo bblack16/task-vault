@@ -77,6 +77,14 @@ module TaskVault
           parent.components[component.to_sym] if request.path_info =~ /^\/components\/.*/i
         end
 
+        def path_ids
+          request.path_info.scan(/(?<=\/)\d+(?=\/)/).map(&:to_i)
+        end
+
+        def path_id
+          path_ids.first
+        end
+
         def json_format(payload)
           if params.include?(:pretty)
             JSON.pretty_generate(payload)

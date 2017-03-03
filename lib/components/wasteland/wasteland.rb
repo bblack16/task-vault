@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 require_relative 'server'
-require_relative 'components/wasteland_component'
+require_relative 'components/component'
+require_relative 'components/workbench'
 require_relative 'components/vault'
+require_relative 'components/courier'
 
 module TaskVault
   class Wasteland < ServerComponent
+    attr_int :port, default: 4567, serialize: true
+    attr_str :bind, default: 'localhost', serialize: true
 
     VERSION = '0.1.0'
 
@@ -38,6 +42,7 @@ module TaskVault
     end
 
     def run
+      Server.set(port: port, bind: bind)
       Server.run!
       while Server.running?
         sleep(10)
