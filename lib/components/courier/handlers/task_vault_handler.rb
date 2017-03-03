@@ -27,7 +27,7 @@ module TaskVault
         [
           build_time(msg[:time]),
           SEVERITIES[msg[:severity]] || 'UNKN ',
-          msg[:component].to_s.sub('TaskVault::', ''),
+          msg[:component].to_s.sub('TaskVault::', '').sub('Tasks::', '').sub('Handlers::', ''),
           build_name(msg),
           build_message(msg[:msg])
         ].compact.join(' - ')
