@@ -47,7 +47,7 @@ module TaskVault
 
     alias add_recipe add
 
-    def save(name, format: :yml)
+    def save(name, format: :yaml)
       if recipe = @recipes[name.to_sym]
         task = recipe[:task]
         path = "#{@path}/recipes/#{task.name}".pathify
