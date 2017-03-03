@@ -1,5 +1,6 @@
 require_relative 'component'
 require_relative 'server_component'
+require_relative 'sub_component'
 require_relative 'print_to_queue'
 require_relative 'vault/vault'
 require_relative 'courier/courier'
