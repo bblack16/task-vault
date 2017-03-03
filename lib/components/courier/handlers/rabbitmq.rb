@@ -9,6 +9,7 @@ module TaskVault
       attr_int :port, default: 5672, serialize: true
       attr_str :user, :pass, default: 'guest', serialize: true
       attr_str :default_queue, default: nil, allow_nil: true, serialize: true
+      attr_hash :queue_options, :publish_options, default: {}, serialize: true
       attr_bool :keep_alive, default: true, serialize: true
       attr_element_of [:json, :yaml, :string], :format, default: :json, serialize: true
       attr_ary_of [String, Symbol], :include_fields, :exclude_fields, default: nil, allow_nil: true, serialize: true
@@ -27,7 +28,7 @@ module TaskVault
         open_channel
         msg   = read
         queue = get_queue(msg[:queue] || default_queue)
-        channel.default_exchange.publish(build_msg(msg), routing_key: queue.name)
+        channel.default_exchange.publish(build_msg(msg), **publish_options.merge(routing_key: queue.name))
       rescue => e
         queue_msg("There was an error processing a message. message = #{msg.to_s[0..49]}..., error = #{e}; #{e.backtrace}", severity: :error)
       end
@@ -70,7 +71,7 @@ module TaskVault
       end
 
       def get_queue(name)
-        @channel.queue(name)
+        @channel.queue(name, **queue_options)
       end
     end
   end
