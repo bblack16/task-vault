@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module TaskVault
   class Server < BBLib::LazyClass
-    attr_valid_dir :path, allow_nil: true, default: Dir.pwd, serialize: true, always: true
+    attr_valid_dir :path, mkdir: true, allow_nil: true, default: Dir.pwd, serialize: true, always: true
     attr_hash :components, serialize: true, always: true
 
     def path=(path)
@@ -53,6 +53,10 @@ module TaskVault
 
     def remove(*components)
       components.each { |name| @components.delete(name.to_sym) }
+    end
+
+    def components_of(klass)
+      components.values.find_all { |c| c.class == klass }
     end
 
     def health
