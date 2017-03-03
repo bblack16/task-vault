@@ -2,6 +2,10 @@
 module TaskVault
   class ServerComponent < Component
 
+    def root
+      parent
+    end
+
     def self.description
       'No description yet...'
     end
