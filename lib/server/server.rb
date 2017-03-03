@@ -116,22 +116,49 @@ module TaskVault
       @components.find { |n, _c| n == method } || super
     end
 
+    def self.basic(*args)
+      TaskVault::Server.new(*args) do |t|
+        t.add(
+          courier:   Courier.new(parent: self, name: 'courier'),
+          vault:     Vault.new(parent: self, name: 'vault'),
+          sentry:    Sentry.new(parent: self, name: 'sentry')
+        )
+      end
+    end
+
+    def self.classic(*args)
+      TaskVault::Server.new(*args) do |t|
+        t.add(
+          courier:   Courier.new(parent: self, name: 'courier'),
+          vault:     Vault.new(parent: self, name: 'vault'),
+          workbench: Workbench.new(parent: self, name: 'workbench'),
+          sentry:    Sentry.new(parent: self, name: 'sentry'),
+          radio:     Radio.new(parent: self, name: 'radio')
+        )
+      end
+    end
+
+    def self.complete(*args)
+      TaskVault::Server.new(*args) do |t|
+        t.add(
+          courier:   Courier.new(parent: self, name: 'courier'),
+          vault:     Vault.new(parent: self, name: 'vault'),
+          workbench: Workbench.new(parent: self, name: 'workbench'),
+          sentry:    Sentry.new(parent: self, name: 'sentry'),
+          radio:     Radio.new(parent: self, name: 'radio'),
+          wasteland: Wasteland.new(parent: self, name: 'wasteland')
+        )
+      end
+    end
+
     protected
 
     def lazy_setup
       @components = {}
-      add(
-        courier:   Courier.new(parent: self, name: 'courier'),
-        vault:     Vault.new(parent: self, name: 'vault'),
-        workbench: Workbench.new(parent: self, name: 'workbench'),
-        sentry:    Sentry.new(parent: self, name: 'sentry'),
-        radio:     Radio.new(parent: self, name: 'radio')
-      )
     end
 
     def lazy_init(*args)
       named = BBLib.named_args(*args)
-      [named[:remove]].flatten.each { |n| remove(n) } if named[:remove]
       start if named[:start]
     end
   end
