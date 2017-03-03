@@ -3,10 +3,13 @@ module TaskVault
   class Component < BBLib::LazyClass
     attr_of Object, :parent, allow_nil: true
     attr_str :name, serialize: true
-    attr_array_of Symbol, :handlers, default: [:default], raise: true, serialize: true, always: true, pre_proc: proc { |x| x.map { |i| i.to_s.to_sym } }
+    attr_array_of [Symbol, Hash], :handlers, default: [:default], pre_proc: proc { |*x| validate_handlers(*x) }, raise: true, serialize: true, always: true, add_rem: true
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
+    attr_hash :metadata, default: {}, serialize: true, always: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
+
+    after :register_handlers, :lazy_init, :add_handlers, :parent=
 
     def start
       init_thread unless running?
@@ -47,6 +50,12 @@ module TaskVault
 
     alias queue_message queue_msg
 
+    [:debug, :info, :warn, :error, :fatal].each do |sev|
+      define_method "queue_#{sev}" do |msg, **data|
+        queue_msg(msg, **data.merge(severity: sev))
+      end
+    end
+
     def read_msg
       @message_queue.shift
     end
@@ -83,7 +92,7 @@ module TaskVault
       path
     end
 
-    def self.load(data, parent: nil)
+    def self.load(data, parent: nil, namespace: TaskVault)
       return data if data.is_a?(self)
       if data.is_a?(String)
         if data.end_with?('.yml', '.yaml')
@@ -96,7 +105,7 @@ module TaskVault
       data.keys_to_sym!
       data[:parent] = parent
       klass = data[:class].to_s
-      obj = TaskVault.constants.include?(klass.to_sym) ? TaskVault : Object
+      obj = namespace.constants.include?(klass.to_sym) ? namespace : Object
       unless obj.const_get(klass).ancestors.any? { |a| a == self }
         raise "Invalid class #{klass}. Must be a subclass of #{self}."
       end
@@ -147,12 +156,37 @@ module TaskVault
       queue_msg('Uh oh, no one redefined me!', severity: :warn)
     end
 
+    def self.validate_handlers(handlers)
+      handlers.flatten.flat_map do |handler|
+        if handler.is_a?(Hash) || handler.is_a?(Symbol)
+          handler
+        elsif handler.is_a?(MessageHandler)
+          handler.serialize
+        else
+          handler.to_s.to_sym
+        end
+      end.uniq
+    end
+
+    def register_handlers
+      return unless root
+      self.handlers = handlers.flatten.flat_map do |handler|
+        if handler.is_a?(Hash) || handler.is_a?(MessageHandler)
+          root.components_of(Courier).map do |courier|
+            courier.add(handler)
+          end
+        else
+          handler
+        end
+      end.uniq
+    end
+
     def hide_on_inspect
       [:@parent, :@thread]
     end
 
     def compile_msg_data(**data)
-      data.merge(time: Time.now, component: self.class.to_s, name: name).merge(msg_metadata)
+      data.merge(time: Time.now, component: self.class.to_s, name: name).merge(msg_metadata).merge(metadata)
     end
 
     def msg_metadata
