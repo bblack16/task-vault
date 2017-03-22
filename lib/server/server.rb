@@ -147,7 +147,8 @@ module TaskVault
           workbench: Workbench.new(parent: self, name: 'workbench'),
           sentry:    Sentry.new(parent: self, name: 'sentry'),
           radio:     Radio.new(parent: self, name: 'radio'),
-          wasteland: Wasteland.new(parent: self, name: 'wasteland')
+          wasteland: Wasteland.new(parent: self, name: 'wasteland'),
+          inventory: Inventory.new(parent: self, name: 'inventory')
         )
       end
     end
