@@ -10,6 +10,11 @@ module TaskVault
       serialize.merge(history: history[0..9].map { |h| "#{h[:time]} - #{h[:severity].to_s.upcase} - #{h[:msg]}" })
     end
 
+    def inventory
+      return nil unless parent && use_inventory?
+      root.components_of(Inventory).first
+    end
+
     def self.aliases
       @aliases ||= []
     end
