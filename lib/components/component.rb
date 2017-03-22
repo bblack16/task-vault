@@ -7,6 +7,7 @@ module TaskVault
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_hash :metadata, default: {}, serialize: true, always: true
+    attr_bool :use_inventory, default: true, serialize: true, always: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     after :register_handlers, :lazy_init, :add_handlers, :parent=
@@ -70,6 +71,11 @@ module TaskVault
 
     def has_msg?
       !@message_queue.empty?
+    end
+
+    def inventory
+      return nil unless parent && use_inventory?
+      parent.components_of(Inventory).first
     end
 
     # Custom inspect to able to hide unwanted variables
