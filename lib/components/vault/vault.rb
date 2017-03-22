@@ -287,8 +287,5 @@ module TaskVault
         weight += task.weight
       end
     end
-
-    def check_dependencies(task)
-    end
   end
 end
