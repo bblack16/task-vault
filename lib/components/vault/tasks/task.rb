@@ -3,7 +3,7 @@ module TaskVault
   class Task < SubComponent
     STATES = [
       :created, :queued, :ready, :running, :finished, :error, :waiting,
-      :failed_dependency, :missing_dependency, :canceled, :timedout, :unknown
+      :canceled, :timedout, :unknown
     ].freeze
 
     after :set_initial_priority, :priority=
