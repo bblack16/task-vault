@@ -97,6 +97,16 @@ module TaskVault
         @queue.push(file)
         queue_debug("New file detected for processing (in queue #{@queue.size}): #{file}")
       end
+
+      def setup_routes
+        get '/queue' do
+          queue
+        end
+
+        get '/processed' do
+          processed
+        end
+      end
     end
   end
 end
