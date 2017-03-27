@@ -5,7 +5,7 @@ module TaskVault
       attr_valid_dir :path, default: Dir.pwd, serialize: true, always: true
       attr_string :file_name, default: 'task_vault', serialize: true, always: true
       attr_string :extension, default: 'log', serialize: true, always: true
-      attr_string :file_time_format, default: '.%y.%d', serialize: true, always: true
+      attr_string :file_time_format, default: '.%Y.%d', serialize: true, always: true
 
       add_alias(:logger)
 

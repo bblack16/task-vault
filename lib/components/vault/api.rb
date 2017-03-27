@@ -1,9 +1,7 @@
-require_relative 'task'
+require_relative 'task_api'
 
 module TaskVault
   class Vault < ServerComponent
-
-    # after :register_task_routes, :add, send_value: true
 
     def self.extract_task_route(route)
       path  = route.split(/(?<=[^^])\/(?=[^$])/)
@@ -12,10 +10,6 @@ module TaskVault
     end
 
     protected
-
-    # def register_task_routes(task)
-    #   task.register_routes
-    # end
 
     def setup_routes
       super
@@ -109,8 +103,10 @@ module TaskVault
         component.class.registry
       end
 
-      get '/tasks/:id/*' do
-        component.find(params[:id].to_i).call_route(:get, TaskVault::Vault.extract_task_route(request.path_info), params)
+      [:get, :post, :delete, :put].each do |verb|
+        send(verb, '/tasks/:id/*') do
+          component.find(params[:id].to_i).call_route(verb, TaskVault::Vault.extract_task_route(request.path_info), params, request)
+        end
       end
     end
   end

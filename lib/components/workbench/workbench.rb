@@ -111,6 +111,7 @@ module TaskVault
 
     def setup_defaults
       @recipes = {}
+      require_relative 'api'
     end
 
     def run

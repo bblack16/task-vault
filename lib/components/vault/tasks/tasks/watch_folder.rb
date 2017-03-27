@@ -5,7 +5,9 @@ module TaskVault
       attr_array_of String, :paths, add_rem: true, uniq: true, default: [], serialize: true, always: true
       attr_array_of String, :filter, add_rem: true, uniq: true, default: nil, allow_nil: true, serialize: true, always: true
       attr_int_between 0.001, nil, :interval, default: 5, serialize: true, always: true
-      attr_bool :recursive, default: true, serialize: true, always: true
+      attr_bool :recursive, default: false, serialize: true, always: true
+      attr_bool :track_processed, default: true, serialize: true, always: true
+      attr_bool :full_details, default: false, serialize: true, always: true
       attr_array :queue, default: []
       attr_array :processed, default: []
       attr_reader :processor
@@ -20,8 +22,12 @@ module TaskVault
       protected
 
       def process_file(file)
-        @processed.push(file)
-        queue_msg("Doing nothing with #{file} because no one redefined me!", severity: :warn)
+        @processed.push(file.is_a?(String) ? file : file[:file]) if track_processed?
+        queue_info(file, event: :file)
+      end
+
+      def file_removed(file)
+        # Deal with a file vanishing if needed.
       end
 
       def run
@@ -49,7 +55,7 @@ module TaskVault
         @processor = Thread.new do
           until @queue.empty?
             begin
-              process_file(@queue.shift)
+              process_file(next_file)
             rescue StandardError => e
               queue_msg(e, severity: :error)
             end
@@ -57,11 +63,31 @@ module TaskVault
         end
       end
 
+      def next_file
+        file = @queue.shift
+        return file unless full_details?
+        {
+          file:       file,
+          size:       File.size(file),
+          modified:   File.mtime(file),
+          changed:    File.ctime(file),
+          accessed:   File.stat(file).atime,
+          blocks:     File.stat(file).blocks,
+          block_size: File.stat(file).blksize,
+          full_size:  (File.stat(file).blocks * File.stat(file).blksize rescue nil),
+          mode:       File.stat(file).mode,
+          name:       file.file_name(false),
+          dir:        File.dirname(file),
+          extension:  File.extname(file)
+        }
+      end
+
       def clear_processed(files)
         @processed.each do |pr|
           unless files.include?(pr)
             @processed.delete(pr)
-            queue_msg("File at '#{pr}' is no longer detected. Removing from processed list.", severity: :debug)
+            queue_debug("File at '#{pr}' is no longer detected. Removing from processed list.")
+            file_removed(pr)
           end
         end
       end
@@ -69,7 +95,7 @@ module TaskVault
       def queue_file(file)
         return if @queue.include?(file) || @processed.include?(file)
         @queue.push(file)
-        queue_msg("New file detected for processing (in queue #{@queue.size}): #{file}", severity: :info)
+        queue_debug("New file detected for processing (in queue #{@queue.size}): #{file}")
       end
     end
   end

@@ -3,9 +3,10 @@ module TaskVault
     class Server < Sinatra::Base
 
       before do
+        Wasteland.wasteland.queue_verbose("Processing request: #{request.request_method} #{request.path_info} (#{request.ip} - #{request.user_agent})")
         if params[:format] == 'yaml'
           content_type :yaml
-        else
+        elsif params[:format] != 'html'
           content_type :json
         end
       end
@@ -14,6 +15,8 @@ module TaskVault
         return if response["Content-Type"] == "text/html;charset=utf-8"
         if params[:format] == 'yaml'
           response.body = response.body.to_yaml
+        elsif params[:format] == 'html'
+          response.body = html_format(response.body)
         else
           response.body = json_format(response.body)
         end
@@ -22,6 +25,11 @@ module TaskVault
       def self.route_names(verb)
         return [] unless routes[verb.to_s.upcase]
         routes[verb.to_s.upcase].map { |r| r[0].to_s }
+      end
+
+      def self.remove_route(verb, path)
+        Wasteland.wasteland.queue_verbose("Removing a route from Wasteland: #{verb.to_s.upcase} #{path}")
+        routes[verb.to_s.upcase].delete_if { |r| r[0].to_s == path }
       end
 
       get '/' do
@@ -54,12 +62,17 @@ module TaskVault
         end
       end
 
+      put '/reboot' do
+        parent.stop
+        TaskVault::Server.reboot(2)
+      end
+
       get '/components' do
-        parent.components.map { |k, v| [k, v.class.to_s] }.to_h
+        parent.components.map { |v| [v.name, v.class.to_s] }.to_h
       end
 
       get '/logs' do
-        logs = parent.components.flat_map { |_n, c| c.history }
+        logs = parent.components.flat_map(&:history)
         process_component_logs(logs)
       end
 
@@ -74,7 +87,7 @@ module TaskVault
 
         def component
           component = params[:component] || request.path_info.split('/')[2]
-          parent.components[component.to_sym] if request.path_info =~ /^\/components\/.*/i
+          parent.component(component.to_sym) if request.path_info =~ /^\/components\/.*/i
         end
 
         def path_ids
@@ -91,6 +104,10 @@ module TaskVault
           else
             payload.to_json
           end
+        end
+
+        def html_format(payload)
+          payload.to_s
         end
 
         def process_component_logs(logs)

@@ -3,7 +3,7 @@ module TaskVault
   class Sentry < ServerComponent
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
     attr_float_between 0, nil, :initial_delay, default: 60, serialize: true, always: true
-    attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true
+    attr_array_of Symbol, :components, default: [], add_rem: true, serialize: true, always: true
     def start
       queue_msg('Starting up component.', severity: :info)
       super
@@ -27,19 +27,19 @@ module TaskVault
         start = Time.now
         info = { checked: 0, errors: 0, success: 0, failed: 0 }
         queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: :debug)
-        @parent.components.each do |name, component|
-          next unless @components.empty? || @components.include?(name)
+        @parent.components.each do |component|
+          next unless @components.empty? || @components.include?(component.name)
           info[:checked] += 1
           next if component.running?
-          queue_msg("Sentry found #{name} in an inactive state. Attempting to restart it now.", severity: :warn)
+          queue_msg("Sentry found #{component.name} in an inactive state. Attempting to restart it now.", severity: :warn)
           info[:errors] += 1
           component.restart
           sleep(0.5)
           if component.running?
-            queue_msg("Sentry successfully restarted #{name}.", severity: :warn)
+            queue_msg("Sentry successfully restarted #{component.name}.", severity: :warn)
             info[:success] += 1
           else
-            queue_msg("Sentry was unable to restart #{name}.", severity: :error)
+            queue_msg("Sentry was unable to restart #{component.name}.", severity: :error)
             info[:failed] += 1
           end
         end

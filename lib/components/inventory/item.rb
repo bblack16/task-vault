@@ -9,16 +9,25 @@ module TaskVault
       attr_of Time, :last_accessed, default: Time.now
 
       after :_default_key, :lazy_init
-      after :access_update, :item, :value
+      after :access_update, :value
 
       alias_method :item, :value
       alias_method :item=, :value=
 
+      def details
+        serialize.merge(
+          access_count: access_counter,
+          last_accessed: last_accessed,
+          expiration: expiration,
+          item_class: @value.class.to_s
+        )
+      end
+
       def fits?(params)
-        return false unless params.is_a?(Hash) && params[:class]
+        return false unless params.is_a?(Hash)# && params[:class]
         params.all? do |k, param|
           if k == :class
-            value.class.to_s == param.to_s
+            @value.class.to_s == param.to_s
           else
             compare(param, description[k])
           end

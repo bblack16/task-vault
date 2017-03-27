@@ -189,6 +189,7 @@ module TaskVault
         done:    []
       }
       @last_id = -1
+      require_relative 'api'
     end
 
     def next_id

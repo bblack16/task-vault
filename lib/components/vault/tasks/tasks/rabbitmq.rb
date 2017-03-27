@@ -16,7 +16,7 @@ module TaskVault
 
       # Redefine this method. The default version just queues the message in TaskVault
       def process_message(msg, info, properties)
-        queue_msg(msg, severity: :info)
+        queue_info(msg, event: :message)
         # Remeber to ack the message if manual_ack is used
         acknowledge(delivery_info.delivery_tag) if options[:manual_ack]
       end

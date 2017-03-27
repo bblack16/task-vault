@@ -3,13 +3,23 @@ module TaskVault
   class Component < BBLib::LazyClass
     VERBS = [:get, :put, :post, :delete]
 
-    after :setup_routes, :lazy_init
+    after :_setup_routes, :lazy_init
+    before :_parent_prechange, :parent=, send_args: true
+    after :_parent_postchange, :parent=
+    after :_remove_routes, :disown
 
     protected
 
+    def _routes
+      @_routes ||= {}
+    end
+
     def add_route(verb, path, &block)
+      return false unless defined?(Wasteland::Server)
       raise ArgumentError, "Unknown http verb '#{verb}'. Verb must be of #{VERBS.join(', ')}" unless VERBS.include?(verb)
+      path = '' if path == '/'
       full_route = "/components/#{name}#{path}"
+      (_routes[verb] ||= []) << full_route
       Wasteland::Server.send(verb, full_route, &block) unless Wasteland::Server.route_names(verb).include?(full_route)
     end
 
@@ -34,7 +44,8 @@ module TaskVault
       sub.routes
     end
 
-    def setup_routes
+    def _setup_routes
+      return unless parent && name
       get '/' do
         component.serialize.merge(
           description: component.description,
@@ -73,6 +84,28 @@ module TaskVault
           { cmd => component.send(cmd) }
         end
       end
+      setup_routes
+    end
+
+    def setup_routes
+      # Redefine this in subclasses to setup custom routes
+    end
+
+    def _remove_routes
+      _routes.each do |verb, paths|
+        paths.each do |path|
+          Wasteland::Server.remove_route(verb, path)
+        end
+      end
+      @_routes = {}
+    end
+
+    def _parent_prechange(new_parent)
+      _remove_routes unless parent == new_parent
+    end
+
+    def _parent_postchange
+      _setup_routes if _routes.empty?
     end
 
   end

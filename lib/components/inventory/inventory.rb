@@ -18,6 +18,10 @@ module TaskVault
       super
     end
 
+    def self.description
+      'You make it, I store it. Inventory is a shared object store for all of the components running in a server.'
+    end
+
     def size
       items.size
     end
@@ -37,12 +41,12 @@ module TaskVault
 
     def find_item(qry)
       self.access_counter += 1
-      return register(qry) if qry.is_a?(Item)
+      return store(qry) if qry.is_a?(Item)
       items.find do |i|
         if qry.is_a?(Hash)
           i.fits?(qry)
         else
-          i.key == qry
+          i.key.to_s == qry.to_s
         end
       end
     end
@@ -62,7 +66,7 @@ module TaskVault
       end
     end
 
-    def register(args)
+    def store(args)
       item = find(args) unless args.is_a?(Item)
       return item if item
       _add_item(args.is_a?(Item) ? args : Item.new(args))
@@ -92,6 +96,11 @@ module TaskVault
     end
 
     protected
+
+    def lazy_init(*args)
+      super
+      require_relative 'api'
+    end
 
     def run
       loop do

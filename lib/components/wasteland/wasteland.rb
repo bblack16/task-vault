@@ -1,16 +1,26 @@
 # frozen_string_literal: true
-require_relative 'server'
-require_relative 'components/component'
-require_relative 'components/workbench'
-require_relative 'components/vault'
-require_relative 'components/courier'
+require_relative 'server' if (require 'sinatra' rescue false)
+require_relative 'component'
+require_relative 'sub_component'
+# require_relative 'components/workbench'
+# require_relative 'components/vault'
+# require_relative 'components/courier'
 
 module TaskVault
   class Wasteland < ServerComponent
     attr_int :port, default: 4567, serialize: true
     attr_str :bind, default: 'localhost', serialize: true
 
+    def self.new(*args, &block)
+      return @wasteland if @wasteland
+      @wasteland = super
+    end
+
     VERSION = '0.1.0'
+
+    def self.wasteland
+      @wasteland
+    end
 
     def start
       queue_msg('Welcome to the Wasteland, wanderer! (Started)', severity: :info)

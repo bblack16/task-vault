@@ -52,8 +52,7 @@ module TaskVault
                 task = CMDTask.new(build_task(script, (info[:path] || name)))
                 @scripts[script] = task
                 @parent.add(task)
-                queue_msg("Found new script: '#{script}'. It has been added to Vault using interpreter #{name}.",
-                          severity: :debug)
+                queue_info("Found new script: '#{script}'. It has been added to Vault using interpreter #{name}.")
               end
               script
             end
@@ -62,7 +61,7 @@ module TaskVault
           @scripts.find_all { |path, _task| !paths.include?(path) }.to_h.each do |n, t|
             t.cancel
             @scripts.delete(n)
-            queue_msg("Script no longer found in path. Canceling and removing '#{n}'.", severity: :info)
+            queue_info("Script no longer found in path. Canceling and removing '#{n}'.")
           end
         end
       end

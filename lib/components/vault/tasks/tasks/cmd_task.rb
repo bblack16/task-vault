@@ -20,12 +20,12 @@ module TaskVault
 
       def run
         command = compile_cmdline
-        queue_msg("About to run cmd: #{command}", severity: :debug)
+        queue_debug("About to run cmd: #{command}")
         Open3.popen3(command, chdir: (@working_directory || '/')) do |_i, o, e, w|
           @pid = w.pid
           [o, e].each do |stream|
             stream.each do |line|
-              queue_msg(line, severity: (stream == o ? :info : :error))
+              queue_msg(line, severity: (stream == o ? :info : :error), event: :stdout)
             end
           end
         end

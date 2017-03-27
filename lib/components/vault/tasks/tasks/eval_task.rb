@@ -11,6 +11,11 @@ module TaskVault
 
       protected
 
+      def lazy_init(*args)
+        extend PutsQueue unless named.include?(:no_puts)
+        super
+      end
+
       def run
         eval(@evaluation)
       end

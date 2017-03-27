@@ -2,62 +2,86 @@
 module TaskVault
   class Server < BBLib::LazyClass
     attr_valid_dir :path, mkdir: true, allow_nil: true, default: Dir.pwd, serialize: true, always: true
-    attr_hash :components, serialize: true, always: true
+    attr_ary_of ServerComponent, :components, default: [], serialize: true, always: true
 
     def path=(path)
       @path = path
-      @components.each do |_n, c|
+      @components.each do |c|
         c.path = path if c.respond_to?(:path=)
       end
     end
 
     def start(delay = 0.1)
-      @components.all? do |_n, c|
+      @components.all? do |c|
         c.start
         sleep(delay)
       end
     end
 
-    def stop(delay = 0.1, complete: false)
-      @components.reverse.all? do |n, c|
-        next if !complete && n == :overseer
+    def stop(delay = 0.1)
+      @components.reverse.all? do |c|
         c.stop
         sleep(delay)
       end
     end
 
     def restart
-      @components.all? { |_n, c| c.restart }
+      @components.all?(&:restart)
+    end
+
+    def self.reboot(delay = 0)
+      Thread.new {
+        sleep(delay)
+        BBLib.restart
+      }
+      true
     end
 
     def set_handlers(*handlers)
-      @components.map { |n, c| [n, c.handlers = handlers] }.to_h
+      @components.map { |c| [c.name, c.handlers = handlers] }.to_h
     end
 
     def running?
-      @components.any? { |_n, c| c.running? }
+      @components.any?(&:running?)
     end
 
     def healthy?
-      @components.all? { |_n, c| c.running? }
+      @components.all?(&:running?)
     end
 
-    def add(components)
-      components.each do |name, component|
+    def add(*components)
+      components.each do |component|
         component = Component.load(component) if component.is_a?(Hash)
-        raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::Component)
+        raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::ServerComponent)
         component.parent = self
-        component.name = name
-        @components[name.to_sym] = component
+        remove(component.name).&stop if component?(component.name)
+        @components << component
       end
     end
 
-    def remove(*components)
-      components.each { |name| @components.delete(name.to_sym) }
+    def remove(*keys)
+      keys.each do |key|
+        if key.is_a?(Fixnum)
+          componenets[key]
+        elsif key.is_a?(ServerComponent)
+          next unless components.include?(key)
+          key
+        else
+          component(key)
+        end&.disown
+      end
+    end
+
+    def component(name)
+      components.find { |c| c.name == name.to_sym }
+    end
+
+    def component?(name)
+      components.any? { |c| c.name == name.to_sym }
     end
 
     def components_of(klass)
-      components.values.find_all { |c| c.class == klass }
+      components.find_all { |c| c.class == klass }
     end
 
     def health
@@ -76,13 +100,13 @@ module TaskVault
         version:     TaskVault::VERSION,
         hostname:    (`hostname`.chop rescue nil),
         pid:         Process.pid,
+        cmdline:     BBLib.cmd_line,
         ip_address:  ip_address,
         config_path: path,
         working_dir: Dir.pwd,
         time:        server_time,
         running:     running?,
-        components:  @components.map { |n, c| [n, { running: c.running?, uptime: c.uptime, class: c.class }] }.to_h
-        # handlers:    courier.message_handlers.map { |n, h| [n, { running: h.running?, uptime: h.uptime }] }.to_h
+        components:  @components.map { |c| [c.name, { running: c.running?, uptime: c.uptime, class: c.class }] }.to_h
       }
     end
 
@@ -106,23 +130,23 @@ module TaskVault
     end
 
     def method_missing(*args)
-      if component = @components.find { |n, _c| n == args.first }
-        component[1]
+      if component = @components.find { |c| c.name == args.first.to_s.to_sym }
+        component
       else
         super
       end
     end
 
     def respond_to_missing?(method, include_private = false)
-      @components.find { |n, _c| n == method } || super
+      @components.find { |c| c.name == method.to_s.to_sym } || super
     end
 
     def self.basic(*args)
       TaskVault::Server.new(*args) do |t|
         t.add(
-          courier:   Courier.new(parent: self, name: 'courier'),
-          vault:     Vault.new(parent: self, name: 'vault'),
-          sentry:    Sentry.new(parent: self, name: 'sentry')
+          Courier.new(name: :courier),
+          Vault.new(name: :vault),
+          Sentry.new(name: :sentry)
         )
       end
     end
@@ -130,11 +154,11 @@ module TaskVault
     def self.classic(*args)
       TaskVault::Server.new(*args) do |t|
         t.add(
-          courier:   Courier.new(parent: self, name: 'courier'),
-          vault:     Vault.new(parent: self, name: 'vault'),
-          workbench: Workbench.new(parent: self, name: 'workbench'),
-          sentry:    Sentry.new(parent: self, name: 'sentry'),
-          radio:     Radio.new(parent: self, name: 'radio')
+          Courier.new(name: :courier),
+          Vault.new(name: :vault),
+          Workbench.new(name: :workbench),
+          Sentry.new(name: :sentry),
+          Radio.new(name: :radio)
         )
       end
     end
@@ -142,13 +166,13 @@ module TaskVault
     def self.complete(*args)
       TaskVault::Server.new(*args) do |t|
         t.add(
-          courier:   Courier.new(parent: self, name: 'courier'),
-          vault:     Vault.new(parent: self, name: 'vault'),
-          workbench: Workbench.new(parent: self, name: 'workbench'),
-          sentry:    Sentry.new(parent: self, name: 'sentry'),
-          radio:     Radio.new(parent: self, name: 'radio'),
-          wasteland: Wasteland.new(parent: self, name: 'wasteland'),
-          inventory: Inventory.new(parent: self, name: 'inventory')
+          Courier.new(name: :courier),
+          Vault.new(name: :vault),
+          Workbench.new(name: :workbench),
+          Sentry.new(name: :sentry),
+          Radio.new(name: :radio),
+          Wasteland.new(name: :wasteland),
+          Inventory.new(name: :inventory)
         )
       end
     end
@@ -159,13 +183,8 @@ module TaskVault
 
     protected
 
-    def lazy_setup
-      @components = {}
-    end
-
     def lazy_init(*args)
-      named = BBLib.named_args(*args)
-      start if named[:start]
+      start if BBLib.named_args(*args)[:start]
     end
   end
 end

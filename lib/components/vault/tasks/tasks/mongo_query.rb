@@ -3,7 +3,7 @@ module TaskVault
     class MongoQuery < Task
       attr_ary_of String, :hosts, default: ['127.0.0.1:27017'], serialize: true
       attr_str :database, default: 'task_vault', serialize: true
-      attr_ary_of Hash, :queries, default: [], serialize: true
+      attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_sym :collection, default: nil, allow_nil: true, serialize: true
       attr_reader :db
 
@@ -31,7 +31,7 @@ module TaskVault
         client = Mongo::Client.new(hosts, database: database)
         client.logger.level = ::Logger::FATAL
         queue_msg("MongoDB client created for '#{database}' on #{hosts.join(', ')}.", severity: :info)
-        inventory&.register(item: client, description: { hosts: hosts, database: database }) if use_inventory?
+        inventory&.store(item: client, description: { hosts: hosts, database: database }) if use_inventory?
         client
       end
 
@@ -49,9 +49,10 @@ module TaskVault
 
       # Redefine this method in subclasses to do things with query results.
       def process_result(results, query)
-        queue_msg("Found a total of #{results.count} results for #{query.to_s[0..49]}...", severity: :debug)
+        queue_debug("Found a total of #{results.count} results for #{query.to_s[0..49]}...")
+        queue_info(results, event: :results) if event_handled?(:results)
         results.each do |result|
-          queue_msg(result, severity: :info)
+          queue_info(result, event: :result)
         end
       end
 
@@ -60,6 +61,30 @@ module TaskVault
           collection: collection,
           database: database
         }.merge(super)
+      end
+
+      def setup_routes
+        get '/db' do
+          {
+            connected:  connected?,
+            database:   database,
+            collection: collection,
+            client:     db
+          }
+        end
+
+        get '/queries' do
+          queries
+        end
+
+        post '/add_query' do
+          request.body.rewind
+          add_queries(JSON.parse(request.body.read))
+        end
+
+        delete '/delete/:id' do
+          queries.delete(params[:id].to_i)
+        end
       end
     end
   end

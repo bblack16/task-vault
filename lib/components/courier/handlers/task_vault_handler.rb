@@ -3,11 +3,12 @@ module TaskVault
   module Handlers
     class TaskVaultHandler < MessageHandler
       SEVERITIES = {
-        fatal: 'FATAL',
-        error: 'ERROR',
-        warn:  'WARN ',
-        info:  'INFO ',
-        debug: 'DEBUG'
+        fatal:   'FATAL',
+        error:   'ERROR',
+        warn:    'WARN ',
+        info:    'INFO ',
+        debug:   'DEBUG',
+        verbose: 'VERBO'
       }.freeze
 
       attr_string :time_format, default: '%Y-%m-%d %H:%M:%S.%L', serialize: true, always: true

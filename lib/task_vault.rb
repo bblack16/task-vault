@@ -5,8 +5,8 @@ require 'bblib' unless defined?(BBLib::VERSION)
 require 'ava' unless defined?(Ava::VERSION)
 require 'yaml'
 require 'json'
-require 'sinatra'
 
+require_relative 'bblib/attrs'
 require_relative 'components/_components'
 require_relative 'server/server'
 
