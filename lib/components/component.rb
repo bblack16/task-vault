@@ -9,10 +9,12 @@ module TaskVault
     attr_hash :metadata, default: {}, serialize: true, always: true
     attr_bool :use_inventory, default: true, serialize: true, always: true
     attr_of Hash, :event_handlers, default: {}, serialize: true, to_serialize_only: true
+    attr_ary_of Alert, :alerts, default: [], serialize: true, add_rem: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
     after :register_event_handlers, :event_handlers=, :parent=
+    after :_setup_alerts, :alerts=, :add_alerts
 
     def start
       init_thread unless running?
@@ -51,9 +53,12 @@ module TaskVault
         severity: (msg.is_a?(Exception) ? :error : :info),
         event:    :general
       }.merge(compile_msg_data(**data))
-      @history.unshift(msg.dup)
+      unless data[:alert_only]
+        @history.unshift(msg.dup)
+        @message_queue.push(msg)
+      end
+      alerts.each { |alert| alert.check(msg) }
       @history.pop while @history.size > @history_limit
-      @message_queue.push(msg)
       @message_queue.shift while @message_queue.size > @message_limit
     end
 
@@ -63,6 +68,10 @@ module TaskVault
       define_method "queue_#{sev}" do |msg, **data|
         queue_msg(msg, **data.merge(severity: sev))
       end
+    end
+
+    def queue_alert(msg, **data)
+      queue_msg(msg, **data.merge(alert_only: true))
     end
 
     def read_msg
@@ -240,6 +249,10 @@ module TaskVault
       else
         handlers
       end
+    end
+
+    def _setup_alerts
+      alerts.each { |a| a.parent = self }
     end
 
     def hide_on_inspect
