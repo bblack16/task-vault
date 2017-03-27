@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'alerts/_alerts'
+
 
 module TaskVault
   module Tasks
@@ -9,8 +9,6 @@ module TaskVault
       attr_int_between 0, nil, :retention, default: 5, serialize: true
       attr_float_between 5, nil, :interval, default: 60, serialize: true
       attr_hash :metrics, default: {}
-      attr_ary_of ProcessMonitor, :process_monitors, default: [], serialize: true
-      attr_of NumericMonitor, :cpu_mon, defaults: nil, allow_nil: true, serialize: true
 
       add_alias(:sysmon, :sys_mon)
 
@@ -22,23 +20,17 @@ module TaskVault
 
       def refresh_system
         metrics[:system] = BBLib::OS.system_stats
-        if cpu_mon
-          cpu_mon.parent = self
-          cpu_mon.name = 'CPU %'
-          cpu_mon.check(metrics[:system][:cpu][:total])
-        end
+        queue_alert(metrics[:system], event: :metric)
       end
 
       def refresh_filesystems
         metrics[:filesystems] = BBLib::OS.filesystems
+        queue_alert(metrics[:filesystems], event: :metric)
       end
 
       def refresh_processes
         metrics[:processes] = BBLib::OS.processes
-        process_monitors.each do |pm|
-          pm.parent = self
-          pm.check(*metrics[:processes])
-        end
+        queue_alert(metrics[:processes], event: :metric)
       end
 
       protected
