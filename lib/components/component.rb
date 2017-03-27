@@ -1,16 +1,18 @@
 # frozen_string_literal: true
 module TaskVault
   class Component < BBLib::LazyClass
-    attr_of Object, :parent, allow_nil: true
-    attr_str :name, serialize: true
-    attr_array_of [Symbol, Hash], :handlers, default: [:default], pre_proc: proc { |*x| validate_handlers(*x) }, raise: true, serialize: true, always: true, add_rem: true
+    attr_of Object, :parent, allow_nil: true, default: nil
+    attr_sym :name, required: true, serialize: true
+    attr_handlers :handlers, default: [:default], serialize: true, always: true, add_rem: true
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_hash :metadata, default: {}, serialize: true, always: true
     attr_bool :use_inventory, default: true, serialize: true, always: true
+    attr_of Hash, :event_handlers, default: {}, serialize: true, to_serialize_only: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
-    after :register_handlers, :lazy_init, :add_handlers, :parent=
+    after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
+    after :register_event_handlers, :event_handlers=, :parent=
 
     def start
       init_thread unless running?
@@ -29,6 +31,11 @@ module TaskVault
       stop && start
     end
 
+    def disown
+      self.parent = nil
+      self
+    end
+
     def running?
       !@thread.nil? && @thread.alive?
     end
@@ -40,8 +47,9 @@ module TaskVault
     def queue_msg(msg, **data)
       msg = {
         msg:      msg,
-        handlers: @handlers,
-        severity: (msg.is_a?(Exception) ? :error : :info)
+        handlers: pick_handlers(data),
+        severity: (msg.is_a?(Exception) ? :error : :info),
+        event:    :general
       }.merge(compile_msg_data(**data))
       @history.unshift(msg.dup)
       @history.pop while @history.size > @history_limit
@@ -51,7 +59,7 @@ module TaskVault
 
     alias queue_message queue_msg
 
-    [:debug, :info, :warn, :error, :fatal].each do |sev|
+    [:verbose, :debug, :info, :warn, :error, :fatal].each do |sev|
       define_method "queue_#{sev}" do |msg, **data|
         queue_msg(msg, **data.merge(severity: sev))
       end
@@ -108,7 +116,7 @@ module TaskVault
         end
       end
       raise ArgumentError, "Failed to load task from '#{path}'." if data.nil?
-      data.keys_to_sym!
+      data.keys_to_sym!(recursive: false)
       data[:parent] = parent
       klass = data[:class].to_s
       obj = namespace.constants.include?(klass.to_sym) ? namespace : Object
@@ -120,6 +128,22 @@ module TaskVault
 
     def history_msgs
       @history.map { |h| h[:msg] }
+    end
+
+    def event_handlers=(handlers)
+      @event_handlers = {}
+      handlers.each do |k, v|
+        event_handlers[k] = [v].flatten
+      end
+      event_handlers
+    end
+
+    def remove_event_handler(handler)
+      @event_handlers.delete(handler)
+    end
+
+    def event_handled?(event)
+      event_handlers.any? { |_h, e| e.include?(event) }
     end
 
     protected
@@ -140,10 +164,10 @@ module TaskVault
       # Reserved for child classes to setup their own default variables/methods
     end
 
-    def custom_lazy_init(*args)
+    def lazy_init(*args)
       named = BBLib.named_args(*args)
       init_thread if named[:start]
-      extend PutsQueue unless named.include?(:no_puts)
+      # extend PutsQueue unless named.include?(:no_puts)
     end
 
     def init_thread
@@ -153,13 +177,13 @@ module TaskVault
         begin
           run
         rescue => e
-          queue_msg("#{e}: #{e.backtrace}", severity: :fatal)
+          queue_fatal(e)
         end
       end
     end
 
     def run
-      queue_msg('Uh oh, no one redefined me!', severity: :warn)
+      queue_warn('Uh oh, no one redefined me!')
     end
 
     def self.validate_handlers(handlers)
@@ -175,16 +199,47 @@ module TaskVault
     end
 
     def register_handlers
-      return unless root
-      self.handlers = handlers.flatten.flat_map do |handler|
-        if handler.is_a?(Hash) || handler.is_a?(MessageHandler)
-          root.components_of(Courier).map do |courier|
-            courier.add(handler)
-          end
-        else
-          handler
+      attrs.find_all { |n, o| o[:type] == :handler }.map(&:first).each do |method|
+        handlers = send(method) rescue nil
+        next if handlers.nil? || handlers.empty?
+        replace = handlers.flat_map do |handler|
+          register_handler(handler)
         end
-      end.uniq
+        instance_variable_set("@#{method}", replace.uniq)
+      end
+    end
+
+    def register_event_handlers
+      return unless root
+      @event_handlers = event_handlers.map do |handler, events|
+        if handler.is_a?(Symbol)
+          [handler, events]
+        else
+          [[register_handler(handler)].flatten(1).first, events]
+        end
+      end
+    end
+
+    def register_handler(handler)
+      return handler unless root
+      if handler.is_a?(Hash) || handler.is_a?(MessageHandler)
+        root.components_of(Courier).map do |courier|
+          courier.add(handler)
+        end
+      else
+        handler.to_s.to_sym
+      end
+    end
+
+    def pick_handlers(data)
+      if data.include?(:handlers)
+        data[:handlers]
+      elsif data.include?(:event)
+        h = event_handlers.find_all { |_h, e| e && e.include?(data[:event]) }.map(&:first)
+        h.empty? ? handlers : h
+      else
+        handlers
+      end
     end
 
     def hide_on_inspect
