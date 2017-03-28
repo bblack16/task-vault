@@ -47,6 +47,8 @@ module TaskVault
       end
 
       def setup_routes
+        super
+
         get '/metrics' do
           metrics
         end
