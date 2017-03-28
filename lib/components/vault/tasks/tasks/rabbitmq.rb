@@ -14,15 +14,15 @@ module TaskVault
 
       protected
 
-      # Redefine this method. The default version just queues the message in TaskVault
+      # Redefine this method in subclasses. The default version just queues the message in TaskVault
       def process_message(msg, info, properties)
-        queue_info(msg, event: :message)
+        queue_data(msg, event: :message, info: info, properties: properties)
         # Remeber to ack the message if manual_ack is used
         acknowledge(delivery_info.delivery_tag) if options[:manual_ack]
       end
 
       def run
-        queue_msg('Setting everything up...', severity: :debug)
+        queue_debug('Setting everything up and opening channel...')
         open_channel
         get_queue.subscribe(options) do |delivery_info, properties, body|
           process_message(body, delivery_info, properties)
@@ -30,14 +30,14 @@ module TaskVault
       end
 
       def acknowledge(id)
-
+        channel.acknowledge(id, false)
       end
 
       def setup_connection
         @connection = Bunny.new(host: host, port: port, user: user, pass: pass)
         @connection.start
       rescue => e
-        queue_msg("Error creating Bunny connection to #{host}: #{e}; #{e.backtrace.join('; ')}", severity: :fatal)
+        queue_fatal(e)
       end
 
       def open_channel
@@ -46,13 +46,13 @@ module TaskVault
         @channel = @connection.create_channel
         @channel.prefetch(prefetch) if prefetch
       rescue => e
-        queue_msg("Error opening channel: #{e}; #{e.backtrace.join('; ')}", severity: :error)
+        queue_error(e)
       end
 
       def close_channel
         @channel.close
       rescue => e
-        queue_msg("Error closing channel: #{e}; #{e.backtrace.join('; ')}", severity: :error)
+        queue_error(e)
       end
 
       def get_queue
