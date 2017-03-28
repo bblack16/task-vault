@@ -100,15 +100,7 @@ module TaskVault
     def find_by(**query)
       all_tasks.find do |task|
         query.all? do |k, v|
-          if task.respond_to?(k)
-            begin
-              task.send(k) == v
-            rescue
-              false
-            end
-          else
-            false
-          end
+          task.respond_to?(k) && task.send(k) == v rescue false
         end
       end
     end
