@@ -136,7 +136,13 @@ module TaskVault
 
       [:get, :post, :delete, :put].each do |verb|
         send(verb, '/tasks/:id/*') do
-          component.find(params[:id].to_i).call_route(verb, TaskVault::Vault.extract_task_route(request.path_info), params, request)
+          task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
+          task = component.find_by(name: params[:id]) unless task
+          if task
+            task.call_route(verb, TaskVault::Vault.extract_task_route(request.path_info), params, request)
+          else
+            { status: 404, message: "I've scavenged the Wasteland for that task. Alas, it does not exist!" }
+          end
         end
       end
     end
