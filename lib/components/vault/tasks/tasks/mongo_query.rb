@@ -28,8 +28,8 @@ module TaskVault
 
       def new_client
         Mongo::Logger.logger.level = ::Logger::FATAL
-        client = Mongo::Client.new(hosts, database: database)
-        client.logger.level = ::Logger::FATAL
+        client                     = Mongo::Client.new(hosts, database: database)
+        client.logger.level        = ::Logger::FATAL
         queue_msg("MongoDB client created for '#{database}' on #{hosts.join(', ')}.", severity: :info)
         inventory&.store(item: client, description: { hosts: hosts, database: database }) if use_inventory?
         client
@@ -50,9 +50,9 @@ module TaskVault
       # Redefine this method in subclasses to do things with query results.
       def process_result(results, query)
         queue_debug("Found a total of #{results.count} results for #{query.to_s[0..49]}...")
-        queue_info(results, event: :results) if event_handled?(:results)
+        queue_data(results, event: :results) if event_handled?(:results)
         results.each do |result|
-          queue_info(result, event: :result)
+          queue_data(result, event: :result)
         end
       end
 
