@@ -9,12 +9,10 @@ module TaskVault
     attr_hash :metadata, default: {}, serialize: true, always: true
     attr_bool :use_inventory, default: true, serialize: true, always: true
     attr_of Hash, :event_handlers, default: {}, serialize: true, to_serialize_only: true
-    attr_ary_of Alert, :alerts, default: [], serialize: true, add_rem: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
     after :register_event_handlers, :event_handlers=, :parent=
-    after :_setup_alerts, :alerts=, :add_alerts
 
     def start
       init_thread unless running?
@@ -51,27 +49,21 @@ module TaskVault
         msg:      msg,
         handlers: pick_handlers(data),
         severity: (msg.is_a?(Exception) ? :error : :info),
-        event:    :general
+        event:    :general,
+        _source:   self
       }.merge(compile_msg_data(**data))
-      unless data[:alert_only]
-        @history.unshift(msg.dup)
-        @message_queue.push(msg)
-      end
-      alerts.each { |alert| alert.check(msg) }
+      @history.unshift(msg.dup) unless msg[:severity] == :data
+      @message_queue.push(msg)
       @history.pop while @history.size > @history_limit
       @message_queue.shift while @message_queue.size > @message_limit
     end
 
     alias queue_message queue_msg
 
-    [:verbose, :debug, :info, :warn, :error, :fatal].each do |sev|
+    [:data, :verbose, :debug, :info, :warn, :error, :fatal].each do |sev|
       define_method "queue_#{sev}" do |msg, **data|
         queue_msg(msg, **data.merge(severity: sev))
       end
-    end
-
-    def queue_alert(msg, **data)
-      queue_msg(msg, **data.merge(alert_only: true))
     end
 
     def read_msg
@@ -244,15 +236,11 @@ module TaskVault
       if data.include?(:handlers)
         data[:handlers]
       elsif data.include?(:event)
-        h = event_handlers.find_all { |_h, e| e && e.include?(data[:event]) }.map(&:first)
+        h = event_handlers.find_all { |_h, e| e && [data[:event]].flatten.any? { |ev| e.include?(ev) } }.map(&:first)
         h.empty? ? handlers : h
       else
         handlers
       end
-    end
-
-    def _setup_alerts
-      alerts.each { |a| a.parent = self }
     end
 
     def hide_on_inspect
