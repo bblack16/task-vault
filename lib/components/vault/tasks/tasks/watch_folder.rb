@@ -23,11 +23,12 @@ module TaskVault
 
       def process_file(file)
         @processed.push(file.is_a?(String) ? file : file[:file]) if track_processed?
-        queue_info(file, event: :file)
+        queue_data(file, event: :file)
       end
 
       def file_removed(file)
-        # Deal with a file vanishing if needed.
+        queue_debug("File at '#{pr}' is no longer detected. Removing from processed list.")
+        queue_data(file, event: :removed_file)
       end
 
       def run
@@ -86,7 +87,6 @@ module TaskVault
         @processed.each do |pr|
           unless files.include?(pr)
             @processed.delete(pr)
-            queue_debug("File at '#{pr}' is no longer detected. Removing from processed list.")
             file_removed(pr)
           end
         end
