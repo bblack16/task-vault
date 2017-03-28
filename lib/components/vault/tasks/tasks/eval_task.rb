@@ -12,7 +12,7 @@ module TaskVault
       protected
 
       def lazy_init(*args)
-        extend PutsQueue unless named.include?(:no_puts)
+        extend PutsQueue unless BBLib.named_args(*args).include?(:no_puts)
         super
       end
 
