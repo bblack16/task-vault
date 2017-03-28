@@ -13,10 +13,6 @@ module TaskVault
       @queue.unshift msg
     end
 
-    def self.is_task_vault_handler?
-      true
-    end
-
     def self.load(data, parent: nil, namespace: Handlers)
       super
     end
