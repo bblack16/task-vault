@@ -12,7 +12,10 @@ module TaskVault
       end
 
       after do
-        return if response["Content-Type"] == "text/html;charset=utf-8"
+        return if response['Content-Type'] == 'text/html;charset=utf-8'
+        if response.body.is_a?(Hash) && response.body[:status] && response.body[:status].is_a?(Fixnum)
+          status response.body[:status]
+        end
         if params[:format] == 'yaml'
           response.body = response.body.to_yaml
         elsif params[:format] == 'html'
@@ -74,6 +77,11 @@ module TaskVault
       get '/logs' do
         logs = parent.components.flat_map(&:history)
         process_component_logs(logs)
+      end
+
+      error Sinatra::NotFound do
+        types = %w(scavengers raiders adventurers wanderers vault-dwellers)
+        { status: 404, message: "The Wasteland is vast and expansive, but #{types.sample} have not yet located that resource." }
       end
 
       helpers do
