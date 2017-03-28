@@ -43,7 +43,8 @@ module TaskVault
     end
 
     def register_objects
-      { server: @parent }.merge(@parent.components).each do |component|
+      ([@parent] + @parent.components).each do |component|
+        name = component.is_a?(TaskVault::Server) ? 'server' : component.name
         @controller.register(name => component) if @components.empty? || @components.include?(component.name.to_s)
       end
     end
