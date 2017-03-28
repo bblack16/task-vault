@@ -9,6 +9,10 @@ module TaskVault
       "/#{path[index..-1].join('/')}"
     end
 
+    def self._task_not_found
+      { status: 404, message: 'The requested task does not exist.' }
+    end
+
     protected
 
     def setup_routes
@@ -26,50 +30,76 @@ module TaskVault
       end
 
       get '/tasks/:id' do
-        component.find(params[:id].to_i).describe
+        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
+        task = component.find_by(name: params[:id]) unless task
+        if task
+          task.describe
+        else
+          TaskVault::Vault._task_not_found
+        end
       end
 
       get '/tasks/:id/settings' do
-        component.find(params[:id].to_i).serialize
+        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
+        task = component.find_by(name: params[:id]) unless task
+        if task
+          task.serialize
+        else
+          TaskVault::Vault._task_not_found
+        end
       end
 
       post '/tasks/:id/settings' do
-        task = component.find(params[:id].to_i)
-        params.map do |k, v|
-          if task.respond_to?("#{k}=")
-            task.send("#{k}=", *[v].flatten(1))
-            [k, task.send(k)]
-          else
-            [k, nil]
-          end
-        end.to_h
+        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
+        task = component.find_by(name: params[:id]) unless task
+        if task
+          JSON.parse(request.body.read).map do |k, v|
+            if task.respond_to?("#{k}=")
+              task.send("#{k}=", *[v].flatten(1))
+              task.queue_debug("Changed method #{k} via Wasteland to #{BBLib.chars_up_to(v, 20, '... (first 20)')}. Request from #{request.ip}.", event: :audit)
+              [k, task.send(k)]
+            else
+              [k, nil]
+            end
+          end.to_h
+        else
+          TaskVault::Vault._task_not_found
+        end
       end
 
       get '/tasks/:id/logs' do
-        process_component_logs(component.find(params[:id].to_i).history)
+        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
+        task = component.find_by(name: params[:id]) unless task
+        if task
+          process_component_logs(task.history)
+        else
+          TaskVault::Vault._task_not_found
+        end
       end
 
       post '/tasks/add' do
         begin
           component.add(params.keys_to_sym)
         rescue => e
-          { error: e }
+          { status: 500, message: e }
         end
       end
 
       post '/tasks/cancel/:id' do
         if params[:id].nil? || component.find(params[:id].to_i).nil?
-          { success: false, request: :cancel, message: 'You must pass a valid task id.' }
+          { status: 404, success: false, request: :cancel, message: 'You must pass a valid task id.' }
         else
-          { success: component.cancel(params[:id].to_i), request: :cancel }
+          good = component.cancel(params[:id].to_i)
+          { status: (good ? 200 : 400), success: good, request: :cancel }
         end
       end
 
       post '/tasks/rerun/:id' do
         if params[:id].nil? || component.find(params[:id].to_i).nil?
-          { success: false, request: :rerun, message: 'You must pass a valid task id.' }
+          { status: 404, success: false, request: :rerun, message: 'You must pass a valid task id.' }
         else
-          { success: component.rerun(params[:id].to_i), request: :rerun }
+          good = component.rerun(params[:id].to_i)
+          { status: (good ? 200 : 400), success: component.rerun(params[:id].to_i), request: :rerun }
         end
       end
 
@@ -77,7 +107,8 @@ module TaskVault
         if params[:id].nil? || component.find(params[:id].to_i).nil?
           { success: false, request: :delete_task, message: 'You must pass a valid task id.' }
         else
-          { success: !component.delete(params[:id].to_i).empty?, request: :delete_task, id: params[:id] }
+          good = !component.delete(params[:id].to_i).empty?
+          { status: (good ? 200 : 400), success: good, request: :delete_task, id: params[:id] }
         end
       end
 
