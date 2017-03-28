@@ -78,5 +78,9 @@ module TaskVault
     def self.empty(val, exp)
       val.nil? || val.empty? rescue false
     end
+
+    def self.proc(val, exp)
+      exp.call(val)
+    end
   end
 end
