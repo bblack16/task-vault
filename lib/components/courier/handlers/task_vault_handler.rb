@@ -8,7 +8,8 @@ module TaskVault
         warn:    'WARN ',
         info:    'INFO ',
         debug:   'DEBUG',
-        verbose: 'VERBO'
+        verbose: 'VERBO',
+        data:    'DATA'
       }.freeze
 
       attr_string :time_format, default: '%Y-%m-%d %H:%M:%S.%L', serialize: true, always: true
