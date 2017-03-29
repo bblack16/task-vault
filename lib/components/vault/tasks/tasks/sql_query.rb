@@ -2,7 +2,7 @@
 module TaskVault
   module Tasks
     class SqlQuery < Task
-      attr_ary_of String, :host, default: 'localhost', serialize: true, always: true
+      attr_of String, :host, default: 'localhost', serialize: true, always: true
       attr_int :port, default: 5672, serialize: true, always: true
       attr_str :user, :pass, default: 'guest', serialize: true, always: true
       attr_str :database, default: :task_vault, serialize: true, always: true
@@ -10,6 +10,8 @@ module TaskVault
       attr_hash :options, default: {}, serialize: true, always: true
       attr_ary_of String, :queries, default: [], serialize: true, always: true
       attr_element_of [:array, :dataset], :format, default: :array, serialize: true, always: true
+      attr_bool :cache, default: true, serialize: true, always: true
+      attr_int :cache_limit, default: 1, serialize: true, always: true
       attr_reader :db
 
       add_alias(:sql_query, :sql_qry)
@@ -30,6 +32,14 @@ module TaskVault
         acknowledge(delivery_info.delivery_tag) if options[:manual_ack]
       end
 
+      def results_cache
+        @results_cache ||= {}
+      end
+
+      def cache_result(result)
+        results_cache[Time.now] = result
+      end
+
       def run
         connect
         queue_debug("Starting up. About to run #{queries.size} #{BBLib.pluralize(queries.size, 'quer', 'ies', 'y')}.")
@@ -43,9 +53,11 @@ module TaskVault
       def process_result(result, query)
         queue_data(query, event: :query)
         queue_data(result, event: :result)
+        cache_result(result) if cache?
+        results_cache.shift until results_cache.size <= cache_limit
       end
 
-      def connect_opts
+      def connect_opts(inc_pass = true)
         {
           adapter:  adapter,
           host:     host,
@@ -53,20 +65,30 @@ module TaskVault
           user:     user,
           password: pass,
           database: database
-        }.reject { |k, v| v.nil? }.merge(options)
+        }.reject { |k, v| inc_pass == false && k == :password || v.nil? }.merge(options)
       end
 
       def connect
         return if @db && connected?
-        @db = inventory&.find(connect_opts.merge(class: /Sequel.*Database/)) || new_db
+        @db = inventory&.find(connect_opts(false).merge(class: /Sequel.*Database/)) || new_db
       rescue => e
         queue_fatal(e)
       end
 
       def new_db
         @db = Sequel.connect(connect_opts)
-        inventory&.store(item: @db, description: connect_opts)
+        inventory&.store(item: @db, description: connect_opts(false))
         @db
+      end
+
+      def setup_routes
+        get '/cache' do
+          results_cache
+        end
+
+        get '/latest' do
+          results_cache.values.last
+        end
       end
 
     end
