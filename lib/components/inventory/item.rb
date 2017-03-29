@@ -24,7 +24,7 @@ module TaskVault
       end
 
       def fits?(params)
-        return false unless params.is_a?(Hash)# && params[:class]
+        return false unless params.is_a?(Hash)
         params.all? do |k, param|
           if k == :class
             compare(param, @value.class)
