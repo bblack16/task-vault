@@ -27,7 +27,7 @@ module TaskVault
         return false unless params.is_a?(Hash)# && params[:class]
         params.all? do |k, param|
           if k == :class
-            @value.class.to_s == param.to_s
+            compare(param, @value.class)
           else
             compare(param, description[k])
           end
