@@ -126,6 +126,10 @@ module TaskVault
           limit  -= 1 unless limit.negative?
           logs    = logs[offset..limit]
           logs    = logs.map { |log| log.only(*params[:fields].split(',').map(&:to_sym)) } if params.include?('fields')
+          if params[:events]
+            events = params[:events].split(',').map(&:to_sym)
+            logs = logs.select { |log| log[:event].is_a?(Array) ? log[:event].any? { |e| events.include?(e) } : events.include?(log[:event]) }
+          end
           if params.include?('log_format')
             logs = logs.map do |log|
               line = params[:log_format].dup
