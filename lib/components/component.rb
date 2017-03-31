@@ -212,7 +212,7 @@ module TaskVault
 
     def register_event_handlers
       return unless root
-      @event_handlers = event_handlers.map do |handler, events|
+      @event_handlers = event_handlers.hmap do |handler, events|
         if handler.is_a?(Symbol)
           [handler, events]
         else
