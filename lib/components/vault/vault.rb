@@ -19,7 +19,7 @@ module TaskVault
       waiting:            :queued,
       failed_dependency:  :queued,
       missing_dependency: :queued,
-      timed_out:          :done,
+      timeout:            :done,
       canceled:           :done,
       unknown:            :done
     }.freeze
@@ -222,8 +222,8 @@ module TaskVault
       task = self.task(task) if task.is_a?(Fixnum)
       @tasks.each do |_name, queue|
         if queue.include?(task)
-          move_to.push(queue.delete(task))
           task.status = status
+          move_to.push(queue.delete(task))
         end
       end
     end
@@ -250,7 +250,7 @@ module TaskVault
     def check_running
       @tasks[:running].each do |task|
         if task.timeout_check
-          move_task(task, :timed_out)
+          move_task(task, :timeout)
           queue_msg("Task #{task.id} (#{task.name}) has exceeded its max life and has been timed out.", severity: :warn)
         end
         next if task.running?
