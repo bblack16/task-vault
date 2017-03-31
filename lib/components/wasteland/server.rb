@@ -115,7 +115,17 @@ module TaskVault
         end
 
         def html_format(payload)
-          payload.to_s
+          case [payload.class]
+          when [Array]
+            "<ul>#{payload.map { |pl| "<li>#{html_format(pl)}</li>" }.join}</ul>"
+          when [Hash]
+            "<table><tbody>" +
+            payload.map do |k, v|
+              "<tr><td style='font-weight: bold'>#{html_format(k)}</td><td>#{html_format(v)}</td></tr>"
+            end.join + "</tbody></table>"
+          else
+            "<div>#{payload}</div>"
+          end
         end
 
         def process_component_logs(logs)
