@@ -23,6 +23,11 @@ module TaskVault
     attr_int_between 1, nil, :elevate_interval, default: nil, allow_nil: true, serialize: true, always: true
     attr_reader :run_count, :initial_priority, :timer, :times
 
+    def stop
+      @timer.stop if @timer.active?
+      super
+    end
+
     def cancel
       queue_msg('Cancel has been called. Task should end shortly.', severity: :info)
       self.status = :canceled
@@ -85,7 +90,7 @@ module TaskVault
     end
 
     def timeout_check
-      if running? && @max_life && Time.now - started > max_life
+      if running? && @timeout && Time.now - started > timeout
         self.status = :timed_out
         true
       else
