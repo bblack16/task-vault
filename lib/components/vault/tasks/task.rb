@@ -3,7 +3,7 @@ module TaskVault
   class Task < SubComponent
     STATES = [
       :created, :queued, :ready, :running, :finished, :error, :waiting,
-      :canceled, :timedout, :unknown
+      :canceled, :timeout, :unknown
     ].freeze
 
     after :set_initial_priority, :priority=
@@ -91,7 +91,7 @@ module TaskVault
 
     def timeout_check
       if running? && @timeout && Time.now - started > timeout
-        self.status = :timed_out
+        self.status = :timeout
         true
       else
         false
@@ -192,9 +192,9 @@ module TaskVault
         set_time :last_elevated, Time.now
       when :running
         set_time :started, Time.now
-      when :finished || :error || :canceled || :timeout
-        set_time :finished, Time.now
+      when :finished, :error, :canceled, :timeout
         stop
+        set_time :finished, Time.now
       end
     end
   end
