@@ -3,7 +3,7 @@ module TaskVault
   class MessageHandler < SubComponent
     attr_symbol :name, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.25, serialize: true, always: true
-    attr_reader :queue
+    attr_reader :queue, :counter
 
     def push(msg)
       @queue.push msg
@@ -21,6 +21,7 @@ module TaskVault
 
     def setup_defaults
       @queue = []
+      @counter = 0
     end
 
     # Needs to be redefined to avoid redirecting puts to the queue.
@@ -30,12 +31,14 @@ module TaskVault
     end
 
     def read
+      @counter += 1
       @queue.shift
     end
 
     def read_all
       all = []
       @queue.size.times do
+        @counter += 1
         all.push read_msg
       end
       all
