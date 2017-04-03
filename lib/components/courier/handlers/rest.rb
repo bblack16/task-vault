@@ -21,7 +21,7 @@ module TaskVault
       attr_hash :options, default: {}, serialize: true
       attr_hash :default_headers, default: {}, serialize: true
 
-      add_alias(:rest, :rest_client, :webhook)
+      component_aliases(:rest, :rest_client, :webhook)
 
       protected
 

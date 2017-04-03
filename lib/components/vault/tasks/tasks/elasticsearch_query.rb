@@ -10,7 +10,7 @@ module TaskVault
       attr_bool :cache, default: false, serialize: true, always: true
       attr_int :cache_limit, default: 5, serialize: true, always: true
 
-      add_alias(:elasticsearch_query, :elasticsearch_qry)
+      component_aliases(:elasticsearch_query, :elasticsearch_qry)
 
       def connected?
         RestClient.get(base_url)

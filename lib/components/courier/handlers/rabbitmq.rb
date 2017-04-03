@@ -15,7 +15,7 @@ module TaskVault
       attr_ary_of [String, Symbol], :include_fields, :exclude_fields, default: nil, allow_nil: true, serialize: true
       attr_reader :connection, :channel
 
-      add_alias(:rabbitmq, :rabbit_mq)
+      component_aliases(:rabbitmq, :rabbit_mq)
 
       protected
 

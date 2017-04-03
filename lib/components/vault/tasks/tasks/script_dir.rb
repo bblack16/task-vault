@@ -8,7 +8,7 @@ module TaskVault
       attr_hash :interpreters, :script_settings, serialize: true, always: true
       attr_reader :scripts
 
-      add_alias(:script_dir, :scriptdir, :script_directory)
+      component_aliases(:script_dir, :scriptdir, :script_directory)
 
       def calculate_start_time
         self.start_at = Time.now

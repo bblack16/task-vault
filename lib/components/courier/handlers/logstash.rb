@@ -14,7 +14,7 @@ module TaskVault
       attr_hash :options, default: {}, serialize: true
       attr_reader :logger
 
-      add_alias(:logstash, :logstash_logger)
+      component_aliases(:logstash, :logstash_logger)
 
       protected
 

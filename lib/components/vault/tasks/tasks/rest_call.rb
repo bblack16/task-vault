@@ -12,7 +12,7 @@ module TaskVault
       attr_str :payload, default: nil, allow_nil: true, serialize: true, always: true, pre_proc: proc { |x| x.is_a?(Hash) ? x.to_json : x }
       attr_hash :options, default: {}, serialize: true, always: true
 
-      add_alias(:rest_call, :restcall)
+      component_aliases(:rest_call, :restcall)
 
       def url
         "#{protocol}://#{host}:#{port}/#{path}"

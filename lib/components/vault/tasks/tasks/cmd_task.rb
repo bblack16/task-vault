@@ -14,7 +14,7 @@ module TaskVault
       alias args= arguments=
       alias args arguments
 
-      add_alias(:cmd, :cmd_task)
+      component_aliases(:cmd, :cmd_task)
 
       protected
 

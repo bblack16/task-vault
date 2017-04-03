@@ -15,7 +15,7 @@ module TaskVault
       attr_string :time_format, default: '%Y-%m-%d %H:%M:%S.%L', serialize: true, always: true
       attr_element_of SEVERITIES, :level, default: :debug, serialize: true, always: true
 
-      add_alias(:default, :task_vault_handler, :stdout)
+      component_aliases(:default, :task_vault_handler, :stdout)
 
       protected
 

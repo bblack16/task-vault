@@ -13,7 +13,7 @@ module TaskVault
       attr_bool :cache, :send_aggregations, default: true, serialize: true, always: true
       attr_int :minimum_aggregations, default: 3, serialize: true, always: true
 
-      add_alias(:sysmon, :sys_mon)
+      component_aliases(:sysmon, :sys_mon)
 
       def refresh_system
         metrics[:system] = BBLib::OS.system_stats

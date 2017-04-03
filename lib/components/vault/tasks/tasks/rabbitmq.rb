@@ -10,7 +10,7 @@ module TaskVault
       attr_int :prefetch, default: nil, allow_nil: true, serialize: true
       attr_reader :connection, :channel
 
-      add_alias(:rabbitmq, :rabbit_mq)
+      component_aliases(:rabbitmq, :rabbit_mq)
 
       protected
 

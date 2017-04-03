@@ -14,7 +14,7 @@ module TaskVault
 
       # after :setup_client, :hosts=, :database=
 
-      add_alias(:mongo, :mongodb, :mongo_db)
+      component_aliases(:mongo, :mongodb, :mongo_db)
 
       protected
 

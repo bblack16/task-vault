@@ -19,7 +19,7 @@ module TaskVault
       @aliases ||= []
     end
 
-    def self.add_alias(*aliases)
+    def self.component_aliases(*aliases)
       aliases.each do |a|
         clean = a.to_s.downcase.to_sym
         self.aliases << clean unless self.aliases.include?(clean)

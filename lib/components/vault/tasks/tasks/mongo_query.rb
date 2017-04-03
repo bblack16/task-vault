@@ -7,7 +7,7 @@ module TaskVault
       attr_sym :collection, default: nil, allow_nil: true, serialize: true
       attr_reader :db
 
-      add_alias(:mongo_query, :mongo_qry, :mongoquery, :mongoqry)
+      component_aliases(:mongo_query, :mongo_qry, :mongoquery, :mongoqry)
 
       def connected?
         return false unless @db

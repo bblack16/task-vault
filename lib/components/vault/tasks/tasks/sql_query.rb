@@ -14,7 +14,7 @@ module TaskVault
       attr_int :cache_limit, default: 1, serialize: true, always: true
       attr_reader :db
 
-      add_alias(:sql_query, :sql_qry)
+      component_aliases(:sql_query, :sql_qry)
 
       def connected?
         db.tables

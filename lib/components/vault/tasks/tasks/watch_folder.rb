@@ -17,13 +17,14 @@ module TaskVault
       alias filters filter
       alias filters= filter=
 
-      add_alias(:watch_folder, :watchfolder)
+      component_aliases(:watch_folder, :watchfolder)
 
       protected
 
       def process_file(file)
         @processed.push(file.is_a?(String) ? file : file[:file]) if track_processed?
         queue_data(file, event: :file)
+        queue_data(load_details(file), event: :file_details) if full_details?
       end
 
       def file_removed(file)
@@ -65,8 +66,10 @@ module TaskVault
       end
 
       def next_file
-        file = @queue.shift
-        return file unless full_details?
+        @queue.shift
+      end
+
+      def load_details(file)
         {
           file:       file,
           size:       File.size(file),
@@ -96,6 +99,7 @@ module TaskVault
         return if @queue.include?(file) || @processed.include?(file)
         @queue.push(file)
         queue_debug("New file detected for processing (in queue #{@queue.size}): #{file}")
+        start_processor unless @queue.empty? || @processor && @processor.alive?
       end
 
       def setup_routes

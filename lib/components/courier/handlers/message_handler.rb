@@ -45,7 +45,7 @@ module TaskVault
     end
 
     def run
-      queue_debug("Starting handler...")
+      queue_debug('Starting handler...')
       loop do
         start = Time.now.to_f
         process_message until @queue.empty?

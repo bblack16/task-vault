@@ -7,7 +7,7 @@ module TaskVault
       alias code= evaluation=
       alias code evaluation
 
-      add_alias(:eval, :eval_task)
+      component_aliases(:eval, :eval_task)
 
       protected
 
