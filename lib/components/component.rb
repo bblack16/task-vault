@@ -8,6 +8,7 @@ module TaskVault
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_hash :metadata, default: {}, serialize: true, always: true
     attr_bool :use_inventory, default: true, serialize: true, always: true
+    attr_hash :inventory_items, default: {}, serialize: true, always: true, to_serialize_only: true
     attr_of Hash, :event_handlers, default: {}, serialize: true, to_serialize_only: true
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
@@ -147,6 +148,12 @@ module TaskVault
       event_handlers.any? { |_h, e| e.include?(event) }
     end
 
+    def inventory_set(method, details, exact: false)
+      raise ArgumentError, 'Inventory usage is not enabled on this component.' unless use_inventory?
+      method = "#{method}=" unless exact || method.to_s.end_with?('=')
+      send(method, inventory.find(details))
+    end
+
     protected
 
     def lazy_setup
@@ -169,6 +176,15 @@ module TaskVault
       named = BBLib.named_args(*args)
       init_thread if named[:start]
       # extend PutsQueue unless named.include?(:no_puts)
+      if use_inventory?
+        inventory_items.each do |setter, details|
+          begin
+            inventory_set(setter, details)
+          rescue => e
+            queue_error("Failed to load item: #{e}")
+          end
+        end
+      end
     end
 
     def init_thread
