@@ -43,6 +43,7 @@ module TaskVault
         handler.start
         queue_info("Added a new message handler to Courier: #{handler.name}")
       end
+      handler.parent = self
       handler.name
     end
 
