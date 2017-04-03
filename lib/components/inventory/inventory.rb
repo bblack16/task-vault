@@ -72,6 +72,8 @@ module TaskVault
       _add_item(args.is_a?(Item) ? args : Item.new(args))
     end
 
+    alias add store
+
     def clean_expired
       number = items.inject(0) do |sum, item|
         if item.expired?
