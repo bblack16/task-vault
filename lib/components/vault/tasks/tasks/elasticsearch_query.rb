@@ -59,6 +59,11 @@ module TaskVault
         count = result.hpath('hits.total').first
         queue_debug("Found a total of #{count} #{BBLib.pluralize(count, 'result')} for #{BBLib.chars_up_to(query, 50, '..')}.")
         queue_data(result, event: :result, query: query)
+        queue_data(result.hpath('hits.hits').first, event: :hits, query: query)
+        result.hpath('hits.hits').first.each do |hit|
+          queue_data(hit, event: :hit, query: query)
+        end
+        queue_data(result['aggregations'], event: :aggregations, query: query)
       end
 
       def setup_routes
@@ -75,7 +80,7 @@ module TaskVault
           queries.delete(params[:id].to_i)
         end
 
-        get '/result' do
+        get '/latest' do
           result_cache.to_a.last.last rescue {}
         end
 
