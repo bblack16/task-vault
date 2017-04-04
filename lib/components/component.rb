@@ -14,6 +14,12 @@ module TaskVault
 
     after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
     after :register_event_handlers, :event_handlers=, :parent=
+    after :reset_inventory_items, :inventory_items=, :parent=
+
+    def self.new(*args, &block)
+      after :_expand_item, *instance_getters, send_value: true, modify_value: true
+      super
+    end
 
     def start
       init_thread unless running?
@@ -151,7 +157,19 @@ module TaskVault
     def inventory_set(method, details, exact: false)
       raise ArgumentError, 'Inventory usage is not enabled on this component.' unless use_inventory?
       method = "#{method}=" unless exact || method.to_s.end_with?('=')
-      send(method, inventory.find(details))
+      send(method, inventory.find_item(details))
+    end
+
+    def reset_inventory_items
+      if use_inventory? && parent
+        inventory_items.each do |setter, details|
+          begin
+            inventory_set(setter, details)
+          rescue => e
+            queue_error("Failed to load item: #{e}")
+          end
+        end
+      end
     end
 
     protected
@@ -174,17 +192,11 @@ module TaskVault
 
     def lazy_init(*args)
       named = BBLib.named_args(*args)
+      self.parent = named[:parent] if named.include?(:parent)
       init_thread if named[:start]
       # extend PutsQueue unless named.include?(:no_puts)
-      if use_inventory?
-        inventory_items.each do |setter, details|
-          begin
-            inventory_set(setter, details)
-          rescue => e
-            queue_error("Failed to load item: #{e}")
-          end
-        end
-      end
+      # reset_inventory_items
+      super
     end
 
     def init_thread
@@ -275,6 +287,11 @@ module TaskVault
 
     def _class_s
       self.class.to_s
+    end
+
+    def _expand_item(item)
+      return item unless @use_inventory && item.is_a?(TaskVault::Inventory::Item)
+      item.value
     end
   end
 end
