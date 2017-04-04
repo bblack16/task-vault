@@ -7,11 +7,12 @@ module TaskVault
       super
 
       get '/handlers' do
-        component.message_handlers.map { |handler| handler.serialize }
+        count = -1
+        component.message_handlers.map { |handler| [count += 1, handler.serialize] }.to_h
       end
 
       get '/handlers/:id' do
-        component.message_handlers[params[:id].to_i].serialize
+        component.message_handlers[params[:id].to_i].describe
       end
 
       post '/handlers/add' do
@@ -53,6 +54,7 @@ module TaskVault
       get '/registry' do
         component.class.registry
       end
+
     end
   end
 end
