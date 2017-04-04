@@ -17,6 +17,13 @@ module TaskVault
       super
     end
 
+    def describe
+      super.merge(
+        queue: queue.size,
+        counter: counter
+      )
+    end
+
     protected
 
     def setup_defaults
@@ -60,6 +67,12 @@ module TaskVault
       # The following is just a very basic example that uses puts
       msg = read
       puts "#{msg[:time].strftime('%Y-%m-%d %H:%M:%S.%L')} - #{msg[:msg]}"
+    end
+
+    def setup_routes
+      get '/queue' do
+        queue
+      end
     end
   end
 end
