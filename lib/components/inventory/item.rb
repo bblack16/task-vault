@@ -7,12 +7,20 @@ module TaskVault
       attr_of Time, :expiration, default: nil, allow_nil: true, serialize: true
       attr_int :access_counter, default: 0
       attr_of Time, :last_accessed, default: Time.now
+      attr_bool :locked, default: false, serialize: true
+      attr_ary_of Class, :allowed_classes, default: nil, serialize: true
 
       after :_default_key, :lazy_init
       after :access_update, :value
 
       alias_method :item, :value
       alias_method :item=, :value=
+
+      def value=(val)
+        raise ArgumentError, 'This item is locked!' if locked?
+        raise ArgumentError, "Wrong class type #{val.class}. This item is class locked to #{allowed_classes.join(', ')}." unless allowed_classes.nil? || allowed_classes.any? { |c| val.is_a?(c) }
+        @value = val
+      end
 
       def details
         serialize.merge(
@@ -50,7 +58,18 @@ module TaskVault
         Time.now <= expiration
       end
 
+      def is_a?(klass)
+        value.is_a?(klass) || super
+      end
+
       protected
+
+      def lazy_init(*args)
+        BBLib.named_args(*args).each do |k, v|
+          next if respond_to?(k)
+          description[k] = v
+        end
+      end
 
       def access_update
         self.access_counter += 1
