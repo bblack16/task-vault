@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module TaskVault
   module Tasks
-    class SqlQuery < Task
+    class Sql < Task
       attr_of String, :host, default: 'localhost', serialize: true, always: true
       attr_int :port, default: 5672, serialize: true, always: true
       attr_str :user, :pass, default: 'guest', serialize: true, always: true
@@ -12,9 +12,9 @@ module TaskVault
       attr_element_of [:array, :dataset], :format, default: :array, serialize: true, always: true
       attr_bool :cache, default: true, serialize: true, always: true
       attr_int :cache_limit, default: 1, serialize: true, always: true
-      attr_reader :db
+      attr_of Sequel::Database, :db
 
-      component_aliases(:sql_query, :sql_qry)
+      component_aliases(:sql, :sql_query, :sql_qry)
 
       def connected?
         db.tables
@@ -70,7 +70,7 @@ module TaskVault
 
       def connect
         return if @db && connected?
-        @db = inventory&.find(connect_opts(false).merge(class: /Sequel.*Database/)) || new_db
+        self.db = inventory&.find_item(connect_opts(false).merge(class: /Sequel.*Database/)) || new_db
       rescue => e
         queue_fatal(e)
       end

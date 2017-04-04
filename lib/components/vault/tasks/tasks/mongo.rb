@@ -1,13 +1,13 @@
 module TaskVault
   module Tasks
-    class MongoQuery < Task
+    class Mongo < Task
       attr_ary_of String, :hosts, default: ['127.0.0.1:27017'], serialize: true
       attr_str :database, default: 'task_vault', serialize: true
       attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_sym :collection, default: nil, allow_nil: true, serialize: true
-      attr_reader :db
+      attr_of ::Mongo::Client, :db
 
-      component_aliases(:mongo_query, :mongo_qry, :mongoquery, :mongoqry)
+      component_aliases(:mongo, :mongo_query, :mongo_qry, :mongoquery, :mongoqry)
 
       def connected?
         return false unless @db
@@ -23,12 +23,12 @@ module TaskVault
       def setup_client(force = false)
         return unless force || database && !hosts.empty?
         return if connected?
-        @db = inventory&.find(class: Mongo::Client, hosts: hosts, database: database) || new_client
+        @db = inventory&.find(class: ::Mongo::Client, hosts: hosts, database: database) || new_client
       end
 
-      def new_client
-        Mongo::Logger.logger.level = ::Logger::FATAL
-        client                     = Mongo::Client.new(hosts, database: database)
+      def new_client(opts = {})
+        ::Mongo::Logger.logger.level = ::Logger::FATAL
+        client                     = ::Mongo::Client.new(opts)
         client.logger.level        = ::Logger::FATAL
         queue_msg("MongoDB client created for '#{database}' on #{hosts.join(', ')}.", severity: :info)
         inventory&.store(item: client, description: { hosts: hosts, database: database }) if use_inventory?

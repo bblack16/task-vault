@@ -1,19 +1,20 @@
 module TaskVault
   module Tasks
-    class ElasticsearchQuery < Task
-      attr_str :host, default: 'localhost', serialize: true, always: true
+    class Elasticsearch < Task
+      # attr_str :host, default: 'localhost', serialize: true, always: true
+      # attr_element_of [:http, :https], :protocol, default: :http, serialize: true, always: true
+      # attr_int :port, default: 9200, serialize: true, always: true
+      # attr_str :user, :pass, default: nil, allow_nil: true, serialize: true
+      attr_str :url, default: 'http://localhost:9200', serialize: true, always: true
       attr_str :index, :type, default: nil, allow_nil:true, serialize: true, always: true
-      attr_element_of [:http, :https], :protocol, default: :http, serialize: true, always: true
-      attr_int :port, default: 9200, serialize: true, always: true
-      attr_str :user, :pass, default: nil, allow_nil: true, serialize: true
       attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_bool :cache, default: false, serialize: true, always: true
       attr_int :cache_limit, default: 5, serialize: true, always: true
 
-      component_aliases(:elasticsearch_query, :elasticsearch_qry)
+      component_aliases(:elasticsearch, :elasticsearch_query)
 
       def connected?
-        RestClient.get(base_url)
+        RestClient.get(url)
         true
       rescue => e
         queue_error(e)
@@ -26,12 +27,8 @@ module TaskVault
 
       protected
 
-      def base_url
-        "#{protocol}://#{user ? "#{user}:#{pass}@" : nil}#{host}:#{port}"
-      end
-
       def search_url
-        "#{base_url}/#{index ? "#{index}/#{type ? "#{type}/" : nil}" : nil}_search"
+        "#{url}/#{index ? "#{index}/#{type ? "#{type}/" : nil}" : nil}_search"
       end
 
       def run

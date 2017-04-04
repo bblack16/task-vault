@@ -1,6 +1,6 @@
 module TaskVault
   module Tasks
-    class RestCall < Task
+    class Rest < Task
       METHODS = [:get, :post, :put, :delete]
       PROTOCOLS = [:http, :https]
       attr_str :host, default: 'localhost', serialize: true, always: true
@@ -12,7 +12,7 @@ module TaskVault
       attr_str :payload, default: nil, allow_nil: true, serialize: true, always: true, pre_proc: proc { |x| x.is_a?(Hash) ? x.to_json : x }
       attr_hash :options, default: {}, serialize: true, always: true
 
-      component_aliases(:rest_call, :restcall)
+      component_aliases(:rest, :rest_call, :restcall)
 
       def url
         "#{protocol}://#{host}:#{port}/#{path}"
