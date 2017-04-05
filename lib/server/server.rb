@@ -54,6 +54,7 @@ module TaskVault
         component = Component.load(component) if component.is_a?(Hash)
         raise ArgumentError, "Values must be descendants of TaskVault::Component not #{component.class}" unless component.is_a?(TaskVault::ServerComponent)
         component.parent = self
+        component.path = path if component.respond_to?(:path=)
         remove(component.name).&stop if component?(component.name)
         @components << component
       end
@@ -146,7 +147,8 @@ module TaskVault
         t.add(
           Courier.new(name: :courier),
           Vault.new(name: :vault),
-          Sentry.new(name: :sentry)
+          Sentry.new(name: :sentry),
+          Inventory.new(name: :inventory)
         )
       end
     end
@@ -158,7 +160,8 @@ module TaskVault
           Vault.new(name: :vault),
           Workbench.new(name: :workbench),
           Sentry.new(name: :sentry),
-          Radio.new(name: :radio)
+          Radio.new(name: :radio),
+          Inventory.new(name: :inventory)
         )
       end
     end
