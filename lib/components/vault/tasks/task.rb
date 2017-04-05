@@ -151,7 +151,7 @@ module TaskVault
         rescue => e
           @timer.stop
           self.status = :error
-          queue_msg e
+          queue_fatal(e)
         end
       end
       self.status = :running
