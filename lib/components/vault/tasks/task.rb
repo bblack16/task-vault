@@ -14,6 +14,7 @@ module TaskVault
     attr_string :name, default: '', serialize: true, always: true
     attr_float :delay, allow_nil: true, default: 0, serialize: true, always: true
     attr_time :start_at, fallback: Time.now
+    attr_time :run_until, default: nil, allow_nil: true, serialize: true, always: true
     attr_float_between 0, nil, :weight, default: 1, serialize: true, always: true
     attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true, serialize: true, always: true
     attr_int_between 0, 6, :priority, default: 3, serialize: true, always: true
@@ -74,6 +75,8 @@ module TaskVault
       rpt = true
       self.start_at = Time.now + @delay if run_count.zero?
       if @repeat.nil? || @repeat == false || run_limit && run_limit.positive? && run_count >= run_limit || @repeat.is_a?(Numeric) && @repeat <= @run_count
+        rpt = false
+      elsif run_until && Time.now >= run_until
         rpt = false
       elsif @repeat == true
         self.start_at = Time.now
