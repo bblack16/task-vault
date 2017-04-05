@@ -63,6 +63,8 @@ module TaskVault
       @message_queue.push(msg)
       @history.pop while @history.size > @history_limit
       @message_queue.shift while @message_queue.size > @message_limit
+    rescue => e
+      @message_queue.push({ msg: e, severity: :fatal })
     end
 
     alias queue_message queue_msg
