@@ -2,13 +2,11 @@
 module TaskVault
   module Tasks
     class RabbitMQ < Task
-      attr_ary_of String, :host, default: 'localhost', serialize: true
-      attr_int :port, default: 5672, serialize: true
-      attr_str :user, :pass, default: 'guest', serialize: true
       attr_str :queue, default: :task_vault, serialize: true
       attr_hash :options, default: { block: true }, serialize: true
       attr_int :prefetch, default: nil, allow_nil: true, serialize: true
-      attr_reader :connection, :channel
+      attr_of Bunny, :connection
+      attr_reader :channel
 
       component_aliases(:rabbitmq, :rabbit_mq)
 
@@ -33,16 +31,8 @@ module TaskVault
         channel.acknowledge(id, false)
       end
 
-      def setup_connection
-        @connection = Bunny.new(host: host, port: port, user: user, pass: pass)
-        @connection.start
-      rescue => e
-        queue_fatal(e)
-      end
-
       def open_channel
-        return if @channel && @channel.open?
-        setup_connection unless @connection
+        return if @channel && @channel.open? || @connection.nil?
         @channel = @connection.create_channel
         @channel.prefetch(prefetch) if prefetch
       rescue => e
