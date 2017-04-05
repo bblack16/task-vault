@@ -40,8 +40,8 @@ module TaskVault
       end
 
       def build_message(msg)
-        if msg.is_a?(Exception)
-          "#{msg}  -  #{msg.backtrace.join('  -  ')}"
+        if msg.is_a?(Exception) || msg.is_a?(StandardError)
+          "#{msg} - #{msg.backtrace.join("\n\t\t")}"
         else
           msg.to_s
         end
