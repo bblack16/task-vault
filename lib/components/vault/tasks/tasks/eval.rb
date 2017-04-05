@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module TaskVault
   module Tasks
-    class EvalTask < Task
+    class Eval < Task
       attr_str :evaluation, default: '', serialize: true, always: true
 
       alias code= evaluation=
