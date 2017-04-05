@@ -1,43 +1,39 @@
+
+Mongo::Logger.logger.level = ::Logger::FATAL
+
 module TaskVault
   module Tasks
-    class Mongo < Task
-      attr_ary_of String, :hosts, default: ['127.0.0.1:27017'], serialize: true
-      attr_str :database, default: 'task_vault', serialize: true
+    class MongoDB < Task
       attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_sym :collection, default: nil, allow_nil: true, serialize: true
-      attr_of ::Mongo::Client, :db
+      attr_of Mongo::Client, :db
 
-      component_aliases(:mongo, :mongo_query, :mongo_qry, :mongoquery, :mongoqry)
+      component_aliases(:mongo, :mongodb, :mongo_db)
 
       def connected?
-        return false unless @db
-        @db.list_databases
+        return false unless db
+        db.list_databases
         true
       rescue => e
-        queue_msg("Error connecting to the cluster: #{e}; #{e.backtrace.join('; ')}")
+        queue_error("Error connecting to the cluster: #{e}; #{e.backtrace.join('; ')}")
         false
       end
 
       protected
 
-      def setup_client(force = false)
-        return unless force || database && !hosts.empty?
-        return if connected?
-        @db = inventory&.find(class: ::Mongo::Client, hosts: hosts, database: database) || new_client
-      end
-
-      def new_client(opts = {})
-        ::Mongo::Logger.logger.level = ::Logger::FATAL
-        client                     = ::Mongo::Client.new(opts)
-        client.logger.level        = ::Logger::FATAL
-        queue_msg("MongoDB client created for '#{database}' on #{hosts.join(', ')}.", severity: :info)
-        inventory&.store(item: client, description: { hosts: hosts, database: database }) if use_inventory?
-        client
+      def lazy_init(*args)
+        super
+        named = BBLib.named_args(*args)
+        return unless named.include?(:hosts) && named.include?(:database) || named.include?(:uri)
+        if named.include?(:uri)
+          self.db = Mongo::Client.new(named[:uri])
+        else
+          self.db = Mongo::Client.new([named[:hosts]].flatten, database: named[:database])
+        end
       end
 
       def run
-        setup_client(true)
-        queue_debug("Spinning up query running agent. I have #{queries.size} quer#{queries.size == 1 ? 'y' : 'ies'} to run against #{collection}.")
+        queue_debug("About to run queries. I have #{queries.size} quer#{queries.size == 1 ? 'y' : 'ies'} to run against #{collection}.")
         queries.each do |query|
           run_query(query)
         end
@@ -59,15 +55,16 @@ module TaskVault
       def msg_metadata
         {
           collection: collection,
-          database: database
+          database:   db.database
         }.merge(super)
       end
 
       def setup_routes
+        super
         get '/db' do
           {
             connected:  connected?,
-            database:   database,
+            database:   db.database,
             collection: collection,
             client:     db
           }
