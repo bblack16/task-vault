@@ -8,7 +8,7 @@ module TaskVault
 
       get '/handlers' do
         count = -1
-        component.message_handlers.map { |handler| [count += 1, handler.serialize] }.to_h
+        component.message_handlers.map { |handler| [count += 1, handler.describe] }.to_h
       end
 
       get '/handlers/:id' do
