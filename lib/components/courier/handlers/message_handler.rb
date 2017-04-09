@@ -20,7 +20,9 @@ module TaskVault
     def describe
       super.merge(
         queue: queue.size,
-        counter: counter
+        counter: counter,
+        running: running?,
+        uptime: uptime
       )
     end
 
