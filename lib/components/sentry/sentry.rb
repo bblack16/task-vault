@@ -4,6 +4,7 @@ module TaskVault
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
     attr_float_between 0, nil, :initial_delay, default: 60, serialize: true, always: true
     attr_array_of Symbol, :components, default: [], add_rem: true, serialize: true, always: true
+
     def start
       queue_msg('Starting up component.', severity: :info)
       super
@@ -26,7 +27,7 @@ module TaskVault
       loop do
         start = Time.now
         info = { checked: 0, errors: 0, success: 0, failed: 0 }
-        queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: :debug)
+        queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: (@parent.health == :green ? :debug : :warn))
         @parent.components.each do |component|
           next unless @components.empty? || @components.include?(component.name)
           info[:checked] += 1
@@ -49,7 +50,7 @@ module TaskVault
           "Sentry finished checking #{info[:checked]} components. Final state: #{@parent.health}." +
           (info[:errors].positive? ? " There were errors with #{info[:errors]} component#{info[:errors] > 1 ? 's:' : nil} #{info[:success]} were successfully restarted, #{info[:failed]} failed to restart." : '') +
           " Next run is in #{sleep_time.to_duration}.",
-          severity: (info[:errors] && info[:failed].positive? ? :error : (info[:errors].positive? ? :warn : :info))
+          severity: (info[:errors] && info[:failed].positive? ? :error : (info[:errors].positive? ? :warn : :debug))
         )
         sleep(sleep_time.negative? ? 0 : sleep_time)
       end
