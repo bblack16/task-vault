@@ -8,6 +8,7 @@ module TaskVault
       attr_bool :recursive, default: false, serialize: true, always: true
       attr_bool :track_processed, default: true, serialize: true, always: true
       attr_bool :full_details, default: false, serialize: true, always: true
+      attr_bool :scan_once, default: false, serialize: true, always: true
       attr_array :queue, default: []
       attr_array :processed, default: []
       attr_reader :processor
@@ -45,9 +46,9 @@ module TaskVault
           end.flatten
 
           clear_processed(files)
-
           start_processor unless @queue.empty? || @processor && @processor.alive?
 
+          break if scan_once?
           sleep_time = @interval - (Time.now.to_f - start.to_f)
           sleep(sleep_time <= 0 ? 0 : sleep_time)
         end
