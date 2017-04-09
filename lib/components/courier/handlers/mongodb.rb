@@ -2,7 +2,7 @@
 module TaskVault
   module Handlers
     class MongoDB < MessageHandler
-      ACTIONS = [:auto, :insert, :update, :update_many, :delete, :delete_many].freeze
+      ACTIONS = [:auto, :auto_set, :auto_update, :auto_insert, :insert, :update, :update_many, :delete, :delete_many, :set, :set_many].freeze
 
       attr_bool :message_only, default: true, serialize: true
       attr_ary_of String, :hosts, default: ['127.0.0.1:27017'], serialize: true
@@ -32,6 +32,12 @@ module TaskVault
         case action
         when :auto
           process_auto(collection, generate_query(record, msg[:lookups] || default_lookups), record)
+        when :auto_set
+          process_auto(collection, generate_query(record, msg[:lookups] || default_lookups), { '$set': record })
+        when :auto_insert
+          process_auto(collection, generate_query(record, msg[:lookups] || default_lookups), record, update: false)
+        when :auto_update
+          process_auto(collection, generate_query(record, msg[:lookups] || default_lookups), record, insert: false)
         when :insert
           insert_doc(collection, record)
         when :update
@@ -42,6 +48,10 @@ module TaskVault
           delete_doc(collection, generate_query(record, msg[:lookups] || default_lookups))
         when :delete_many
           delete_many_docs(collection, generate_query(record, msg[:lookups] || default_lookups))
+        when :set
+          update_doc(collection, generate_query(msg), { '$set': record })
+        when :set_one
+          update_many_docs(collection, generate_query(msg), { '$set': record })
         else
           queue_msg("Unknown action type sent '#{action}'. Allowed types are #{ACTIONS.join(', ')}.", severity: :warn)
         end
@@ -83,12 +93,12 @@ module TaskVault
         queue_msg("Deleted #{count} record#{count  == 1 ? nil : 's'} in #{collection} matching #{query}", severity: :debug)
       end
 
-      def process_auto(collection, query, record)
+      def process_auto(collection, query, record, update: true, insert: true)
         queue_msg("Checking to see if document exists matching #{query}", severity: :debug)
         if !query.empty? && doc_exists?(collection, query)
-          update_doc(collection, query, record)
+          update_doc(collection, query, record) if update
         else
-          insert_doc(collection, record)
+          insert_doc(collection, record) if insert
         end
       end
 
