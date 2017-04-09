@@ -20,7 +20,7 @@ module TaskVault
 
       def run
         command = compile_cmdline
-        queue_debug("About to run cmd: #{command}")
+        queue_info("About to run cmd: #{command}")
         Open3.popen3(command, chdir: (@working_directory || '/')) do |_i, o, e, w|
           @pid = w.pid
           [o, e].each do |stream|
