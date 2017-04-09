@@ -13,7 +13,7 @@ module TaskVault
     attr_reader :message_queue, :thread, :started, :stopped, :history
 
     after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
-    after :register_event_handlers, :event_handlers=, :parent=
+    after :register_event_handlers, :event_handlers=, :parent=, :add_event_handler
     after :reset_inventory_items, :inventory_items=, :parent=
 
     def self.new(*args, &block)
@@ -94,6 +94,16 @@ module TaskVault
     def inventory
       return nil unless parent && use_inventory?
       parent.components_of(Inventory).first
+    end
+
+    def add_event_handler(hash)
+      hash.each do |k, v|
+        event_handlers[k] = v
+      end
+    end
+
+    def remove_event_handler(*keys)
+      keys.map { |k| event_handlers.delete(k) }.compact
     end
 
     # Custom inspect to able to hide unwanted variables
