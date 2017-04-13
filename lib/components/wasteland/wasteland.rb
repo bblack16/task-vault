@@ -1,15 +1,13 @@
 # frozen_string_literal: true
-require_relative 'server' if (require 'sinatra' rescue false)
+require_relative 'server' if (require 'sinatra/base' rescue false)
 require_relative 'component'
 require_relative 'sub_component'
-# require_relative 'components/workbench'
-# require_relative 'components/vault'
-# require_relative 'components/courier'
 
 module TaskVault
   class Wasteland < ServerComponent
     attr_int :port, default: 4567, serialize: true
     attr_str :bind, default: 'localhost', serialize: true
+    attr_hash :settings, default: {}, serialize: true
 
     def self.new(*args, &block)
       return @wasteland if @wasteland
@@ -23,18 +21,19 @@ module TaskVault
     end
 
     def start
-      queue_msg('Welcome to the Wasteland, wanderer! (Started)', severity: :info)
+      return if running?
+      queue_info('Welcome to the Wasteland, wanderer! (Started)')
       super
     end
 
     def stop
-      Server.quit!
-      queue_msg('The Wasteland has been nuked... (Stopped)', severity: :info)
+      if running?
+        Server.quit!
+        queue_info('The Wasteland has been nuked... (Stopped)')
+      else
+        queue_info('Stop called, but the server is not currently running...')
+      end
       super
-    end
-
-    def running?
-      !@thread.nil? && @thread.alive?
     end
 
     def self.current_server
@@ -52,15 +51,15 @@ module TaskVault
     end
 
     def run
-      Server.set(port: port, bind: bind)
+      Server.set(settings.deep_merge(port: port, bind: bind, quiet: true, server_settings: { signals: false }))
+      queue_info("Starting Sinatra server on port #{port} bound to #{bind}.")
       Server.run!
-      while Server.running?
-        sleep(10)
-      end
+    ensure
+      Server.quit!
     end
 
     def msg_metadata
-      {}
+      { port: port, bind: bind }
     end
 
   end
