@@ -44,7 +44,7 @@ module TaskVault
     end
 
     def running?
-      !@thread.nil? && @thread.alive?
+      @thread && @thread.alive?
     end
 
     def uptime
