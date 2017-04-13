@@ -1,6 +1,7 @@
 module TaskVault
   class Wasteland < ServerComponent
     class Server < Sinatra::Base
+      disable :traps
 
       before do
         Wasteland.wasteland.queue_verbose("Processing request: #{request.request_method} #{request.path_info} (#{request.ip} - #{request.user_agent})")
