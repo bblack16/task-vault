@@ -7,8 +7,8 @@ module TaskVault
     attr_int_between 0, nil, :retention, default: 100, allow_nil: true, serialize: true, always: true
     attr_int_between 1, nil, :elevate_interval, default: 300, allow_nil: true, serialize: true, always: true
     attr_ary_of String, :blacklist, add_rem: true, default: [], serialize: true, always: true
-    attr_valid_dir :path, serialize: true, always: true
-    attr_reader :tasks
+    attr_dir :path, serialize: true, always: true
+    attr_reader :tasks, serialize: false
 
     STATUSES = {
       queued:             :queued,
@@ -42,10 +42,10 @@ module TaskVault
     end
 
     def read_msg
-      if @message_queue.empty?
+      if message_queue.empty?
         all_tasks.find(&:has_msg?)&.read_msg
       else
-        @message_queue.shift
+        message_queue.shift
       end
     end
 
@@ -56,7 +56,7 @@ module TaskVault
     end
 
     def has_msg?
-      !@message_queue.empty? || all_tasks.any?(&:has_msg?)
+      !message_queue.empty? || all_tasks.any?(&:has_msg?)
     end
 
     def add(task)
@@ -68,14 +68,14 @@ module TaskVault
       task.status = :queued
       task.id     = next_id
       task.parent = self
-      @tasks[:queued].push task
+      tasks[:queued].push task
       task
     end
 
     alias add_task add
 
     def blacklisted?(obj)
-      @blacklist.any? do |b|
+      blacklist.any? do |b|
         obj.class.to_s == b || "TaskVault::#{obj.class}" == b ||
           obj.is_a?(Hash) && (
             obj[:class].to_s == b || "TaskVault::#{obj[:class]}" == b
@@ -84,7 +84,7 @@ module TaskVault
     end
 
     def all_tasks
-      @tasks.map { |_q, t| t }.flatten
+      tasks.map { |_q, t| t }.flatten
     end
 
     def find(id)
@@ -106,7 +106,7 @@ module TaskVault
     end
 
     def where_is?(task_id)
-      @tasks.find { |_n, q| q.any? { |t| t.id == task_id } }.first
+      tasks.find { |_n, q| q.any? { |t| t.id == task_id } }.first
     rescue
       nil
     end
@@ -117,11 +117,11 @@ module TaskVault
       false
     end
 
-    def delete(id)
+    def remove(id)
       task = task(id)
       return false unless task
       task.cancel
-      @tasks.flat_map { |_q, t| t.delete(task) }.compact.first
+      tasks.flat_map { |_q, t| t.delete(task) }.compact.first
     end
 
     def rerun(id)
@@ -130,17 +130,17 @@ module TaskVault
 
     # Cancels all tasks
     def cancel_all
-      @tasks.each { |_q, t| t.each(&:cancel) }
+      tasks.each { |_q, t| t.each(&:cancel) }
     end
 
     # Clears ALL completed tasks (successful or failed)
     def clear_completed
-      @tasks[:done].clear
+      tasks[:done].clear
     end
 
     # Removes enough completed tasks to meet the current retention policy
     def clean_completed
-      @tasks[:done].shift until @tasks[:done].size <= @retention if @retention
+      tasks[:done].shift until tasks[:done].size <= retention if retention
     end
 
     def task_list(*attributes)
@@ -168,7 +168,7 @@ module TaskVault
     end
 
     def running_weight
-      @tasks[:running].inject(0) { |sum, t| sum += t.weight }
+      tasks[:running].inject(0) { |sum, t| sum += t.weight }
     end
 
     protected
@@ -199,28 +199,28 @@ module TaskVault
         check_running
         check_ready
         clean_completed
-        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        sleep_time = interval - (Time.now.to_f - start.to_f)
         sleep(sleep_time <= 0 ? 0 : sleep_time)
       end
     end
 
     def canceled_check
       [:queued, :ready, :running].each do |type|
-        @tasks[type].each do |task|
+        tasks[type].each do |task|
           move_task task, :canceled if task.status == :canceled
         end
       end
     end
 
     def resort_tasks
-      @tasks[:queued].sort_by! { |t| [t.priority, t.queued] }
-      @tasks[:ready].sort_by! { |t| [t.priority, t.added] }
+      tasks[:queued].sort_by! { |t| [t.priority, t.queued] }
+      tasks[:ready].sort_by! { |t| [t.priority, t.added] }
     end
 
     def move_task(task, status)
-      move_to = @tasks[STATUSES[status]]
-      task = self.task(task) if task.is_a?(Fixnum)
-      @tasks.each do |_name, queue|
+      move_to = tasks[STATUSES[status]]
+      task = self.task(task) if task.is_a?(Integer)
+      tasks.each do |_name, queue|
         if queue.include?(task)
           task.status = status
           move_to.push(queue.delete(task))
@@ -230,7 +230,7 @@ module TaskVault
 
     def check_queued
       total = 0
-      @tasks[:queued].each do |task|
+      tasks[:queued].each do |task|
         if task.start_at <= Time.now
           move_task(task, :ready)
           total += 1
@@ -240,16 +240,16 @@ module TaskVault
     end
 
     def elevate_tasks
-      [@tasks[:queued], @tasks[:running]].each do |set|
+      [tasks[:queued], tasks[:running]].each do |set|
         set.each do |task|
-          task.elevate_check(@elevate_interval)
+          task.elevate_check(elevate_interval)
         end
       end
     end
 
     def check_running
-      @tasks[:running].each do |task|
-        if task.timeout_check
+      tasks[:running].each do |task|
+        if task.timeout?
           move_task(task, :timeout)
           queue_msg("Task #{task.id} (#{task.name}) has exceeded its max life and has been timed out.", severity: :warn)
         end
@@ -273,8 +273,8 @@ module TaskVault
 
     def check_ready
       weight = running_weight
-      @tasks[:ready].each do |task|
-        next unless @limit.nil? || task.priority.zero? || task.weight + weight <= @limit
+      tasks[:ready].each do |task|
+        next unless limit.nil? || task.priority.zero? || task.weight + weight <= limit
         move_task(task, :running)
         task.start
         weight += task.weight

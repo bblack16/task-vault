@@ -1,5 +1,5 @@
 require_relative 'task'
-require_relative 'tasks/cmd_task'
+require_relative 'cmd/cmd_task'
 require_relative 'tasks/script_dir'
 require_relative 'tasks/watch_folder'
 require_relative 'tasks/eval'

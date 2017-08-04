@@ -3,12 +3,12 @@ require_relative 'api'
 
 module TaskVault
   class Workbench < ServerComponent
-    attr_valid_dir :path, allow_nil: true, serialize: true, always: true
+    attr_dir :path, allow_nil: true, serialize: true, always: true, mkdir: true
     attr_bool :recursive, default: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
     attr_sym :vault_name, default: :vault, serialize: true, always: true
     attr_int :id, default: -1, serialize: true, always: true
-    attr_reader :recipes
+    attr_reader :recipes, serialize: false
 
     def start
       queue_info('Starting up component.')
@@ -53,7 +53,7 @@ module TaskVault
       raise ArgumentError, "Invalid format '#{format}'. Must be :yaml or :json." unless [:yaml, :json].include?(format)
       raise ArgumentError, 'You must pass a hash to save a new workbench item.' unless hash.is_a?(Hash)
       raise ArgumentError, 'Your recipe must containg a name.' unless hash[:name]
-      path = "#{@path}/recipes/#{hash[:name]}".pathify
+      path = "#{path}/recipes/#{hash[:name]}".pathify
       queue_info("Saving task #{name} at #{path}.#{format}")
       hash.send("to_#{format}").to_file(path, mode: 'w')
       read(path)
@@ -68,9 +68,9 @@ module TaskVault
     end
 
     def remove(name)
-      return unless @recipes.include?(name) 
+      return unless recipes.include?(name)
       queue_msg("Removing recipe '#{name}' from Workbench.", severity: :info)
-      @recipes.delete(name)[:task].cancel
+      recipes.delete(name)[:task].cancel
     end
 
     def delete(file)
@@ -80,7 +80,7 @@ module TaskVault
     end
 
     def load_recipes
-      BBLib.scan_files("#{path}/recipes/".pathify, '*.yaml', '*.yml', '*.json', recursive: @recursive).map do |file|
+      BBLib.scan_files("#{path}/recipes/".pathify, '*.yaml', '*.yml', '*.json', recursive: recursive).map do |file|
         begin
           read(file)
         rescue => e
@@ -97,23 +97,23 @@ module TaskVault
     end
 
     def next_id
-      @id += 1
+      self.id += 1
     end
 
     def run
       loop do
         start = Time.now
-        if @path && Dir.exist?("#{@path}/recipes")
+        if path && Dir.exist?("#{path}/recipes")
           queue_msg('Workbench is now reloading recipes from disk.', severity: :debug)
           load_recipes
-          @recipes.each do |file, _data|
+          recipes.each do |file, _data|
             remove(file) unless File.exist?(file)
           end
-          queue_debug("Workbench is finished loading recipes from disk. Currently managing #{@recipes.size} total #{BBLib.pluralize(@recipes.size, 'recipe')}.")
+          queue_debug("Workbench is finished loading recipes from disk. Currently managing #{recipes.size} total #{BBLib.pluralize(recipes.size, 'recipe')}.")
         else
-          queue_warn("#{@path} does not exist. No recipes will be loaded...")
+          queue_warn("#{path} does not exist. No recipes will be loaded...")
         end
-        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        sleep_time = interval - (Time.now.to_f - start.to_f)
         sleep(sleep_time.zero? ? 0 : sleep_time)
       end
     end

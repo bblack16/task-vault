@@ -10,7 +10,7 @@ module TaskVault
       attr_element_of ACTIONS, :default_action, default: :auto, allow_nil: true, serialize: true
       attr_sym :default_collection, default: nil, allow_nil: true, serialize: true
       attr_ary_of [Symbol, String], :default_lookups, :ignore_fields, default: [], serialize: true
-      attr_reader :db
+      attr_reader :db, serialize: false
 
       # after :setup_client, :hosts=, :database=
 

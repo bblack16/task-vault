@@ -1,0 +1,37 @@
+sass:
+  .output-box
+    background-color: rgb(33, 33, 33)
+    position: relative
+    color: rgb(232, 232, 232)
+    border: 2px solid black
+    height: 60%
+    word-wrap: pre-wrap
+    word-break: break-word
+    .output-body
+      height: 100%
+      span.err
+        color: red
+    .output-foot
+      position: absolute
+      bottom: 0
+      left: 0
+      float: right
+      width: 100%
+      background-color: rgb(71, 71, 71)
+      border: 2px solid black
+      padding-left: 15px
+
+h1.text-center CMDTask
+h3.text-center = component.name
+hr
+br
+pre.output-box
+  .output-body
+    - component.history.find_all { |h| h[:event] == :stdout || h[:event] == :stderr }.each do |h|
+      span class="#{h[:event] == :stderr ? 'err' : 'out'}" = "#{h[:time].strftime('%Y-%m-%d.%H:%M:%S')}> #{h[:msg]}"
+  .output-foot
+    span = '> '
+    span style='color: rgb(72, 214, 77)' = component.compile_cmdline
+
+/- component.history.each do |record|
+/  li = record

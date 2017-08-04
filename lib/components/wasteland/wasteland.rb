@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-require_relative 'server' if (require 'sinatra/base' rescue false)
+require_relative 'server'
 require_relative 'component'
 require_relative 'sub_component'
 
@@ -28,7 +28,7 @@ module TaskVault
 
     def stop
       if running?
-        Server.quit!
+        Wasteland::Server.quit!
         queue_info('The Wasteland has been nuked... (Stopped)')
       else
         queue_info('Stop called, but the server is not currently running...')
@@ -51,11 +51,11 @@ module TaskVault
     end
 
     def run
-      Server.set(settings.deep_merge(port: port, bind: bind, quiet: true, server_settings: { signals: false }))
+      Wasteland::Server.set(settings.deep_merge(port: port, bind: bind, quiet: true, server_settings: { signals: false }))
       queue_info("Starting Sinatra server on port #{port} bound to #{bind}.")
-      Server.run!
+      Wasteland::Server.run!
     ensure
-      Server.quit!
+      Wasteland::Server.quit!
     end
 
     def msg_metadata

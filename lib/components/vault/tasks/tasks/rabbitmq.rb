@@ -5,8 +5,8 @@ module TaskVault
       attr_str :queue, default: :task_vault, serialize: true
       attr_hash :options, default: { block: true }, serialize: true
       attr_int :prefetch, default: nil, allow_nil: true, serialize: true
-      attr_of Bunny, :connection
-      attr_reader :channel
+      attr_of Bunny, :connection, serialize: false
+      attr_reader :channel, serialize: false
 
       component_aliases(:rabbitmq, :rabbit_mq)
 

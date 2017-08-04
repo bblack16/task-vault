@@ -2,7 +2,7 @@ module TaskVault
 
   class Beacon < ServerComponent
     attr_int :port, default: 2017, serialize: true, always: true
-    attr_hash :connections, default: {}
+    attr_hash :connections, default: {}, serialize: false
 
     def start
       queue_msg('Starting up component.', severity: :info)

@@ -7,12 +7,12 @@ module TaskVault
       super
 
       get '/recipes' do
-        component.recipes
+        recipes
       end
 
       get '/recipes/:id' do
         if params[:id] =~ /\d+/
-          component.recipe(params[:id].to_i)
+          recipe(params[:id].to_i)
         else
           { status: 404, message: 'Invalid ID format. Expected an integer.' }
         end
@@ -20,7 +20,7 @@ module TaskVault
 
       post '/recipes' do
         begin
-          component.add(params.keys_to_sym)
+          add(params.keys_to_sym)
         rescue => e
           { status: 500, message: "Failed to add recipe: #{e}" }
         end
@@ -28,7 +28,7 @@ module TaskVault
 
       post '/recipes/remove/:id' do
         if params[:id] =~ /\d+/
-          component.remove(params[:id])
+          remove(params[:id])
         else
           { status: 404, message: 'Invalid ID format. Expected an integer.' }
         end

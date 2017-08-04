@@ -12,7 +12,7 @@ module TaskVault
       attr_element_of [:array, :dataset], :format, default: :array, serialize: true, always: true
       attr_bool :cache, default: true, serialize: true, always: true
       attr_int :cache_limit, default: 1, serialize: true, always: true
-      attr_of Sequel::Database, :db
+      attr_of Sequel::Database, :db, serialize: false
 
       component_aliases(:sql, :sql_query, :sql_qry)
 

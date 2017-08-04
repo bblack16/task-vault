@@ -1,6 +1,16 @@
 module TaskVault
   class Courier < ServerComponent
 
+    BlockStack::VERBS.each do |verb|
+      send("#{verb}_api", '/handlers/:name/?*') do
+        if handler = retrieve(params[:name])
+          handler.call_route(verb, request, params, @route_delegate)
+        else
+          { status: 404, message: "I've scavenged the Wasteland for that handler. Alas, it does not exist!" }
+        end
+      end
+    end
+
     protected
 
     def setup_routes

@@ -1,9 +1,9 @@
 module BBLib
-  module Attr
+  module Attrs
 
     def attr_handlers(*methods, **opts)
-      methods.each do |m|
-        attr_type(m, opts, &attr_set(m, opts) do |*x|
+      methods.each do |method|
+        attr_custom(method, opts) do |*x|
           x.flatten.flat_map do |handler|
             if handler.is_a?(Hash)
               handler
@@ -13,10 +13,9 @@ module BBLib
               handler.to_s.to_sym
             end
           end
-        end)
-        attr_array_adder(m, Symbol, Hash, **opts) if opts[:adder] || opts[:add_rem]
-        attr_array_remover(m, Symbol, Hash, **opts) if opts[:remover] || opts[:add_rem]
-        _register_attr(m, :handler, opts)
+        end
+        attr_array_adder(method, opts[:adder_name]) if opts[:adder] || opts[:add_rem]
+        attr_array_remover(method, opts[:remover_name]) if opts[:remover] || opts[:add_rem]
       end
     end
 

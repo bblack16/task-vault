@@ -23,13 +23,13 @@ module TaskVault
     protected
 
     def run
-      sleep(@initial_delay)
+      sleep(initial_delay)
       loop do
         start = Time.now
         info = { checked: 0, errors: 0, success: 0, failed: 0 }
-        queue_msg("Sentry is commencing a check of all components. Initial state: #{@parent.health}", severity: (@parent.health == :green ? :debug : :warn))
-        @parent.components.each do |component|
-          next unless @components.empty? || @components.include?(component.name)
+        queue_msg("Sentry is commencing a check of all components. Initial state: #{parent.health}", severity: (parent.health == :green ? :debug : :warn))
+        parent.components.each do |component|
+          next unless components.empty? || components.include?(component.name)
           info[:checked] += 1
           next if component.running?
           queue_msg("Sentry found #{component.name} in an inactive state. Attempting to restart it now.", severity: :warn)
@@ -45,9 +45,9 @@ module TaskVault
           end
         end
 
-        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        sleep_time = interval - (Time.now.to_f - start.to_f)
         queue_msg(
-          "Sentry finished checking #{info[:checked]} components. Final state: #{@parent.health}." +
+          "Sentry finished checking #{info[:checked]} components. Final state: #{parent.health}." +
           (info[:errors].positive? ? " There were errors with #{info[:errors]} component#{info[:errors] > 1 ? 's:' : nil} #{info[:success]} were successfully restarted, #{info[:failed]} failed to restart." : '') +
           " Next run is in #{sleep_time.to_duration}.",
           severity: (info[:errors] && info[:failed].positive? ? :error : (info[:errors].positive? ? :warn : :debug))

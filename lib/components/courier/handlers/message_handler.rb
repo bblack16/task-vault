@@ -3,14 +3,15 @@ module TaskVault
   class MessageHandler < SubComponent
     attr_symbol :name, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.25, serialize: true, always: true
-    attr_reader :queue, :counter
+    attr_int :counter, default: 0, serialize: false
+    attr_reader :queue, serialize: false
 
     def push(msg)
-      @queue.push msg
+      queue.push msg
     end
 
     def unshift(msg)
-      @queue.unshift msg
+      queue.unshift msg
     end
 
     def self.load(data, parent: nil, namespace: Handlers)
@@ -34,20 +35,20 @@ module TaskVault
     end
 
     # Needs to be redefined to avoid redirecting puts to the queue.
-    def custom_lazy_init(*args)
+    def simple_init(*args)
       named = BBLib.named_args(*args)
       init_thread if named[:start]
     end
 
     def read
-      @counter += 1
-      @queue.shift
+      self.counter += 1
+      queue.shift
     end
 
     def read_all
       all = []
-      @queue.size.times do
-        @counter += 1
+      queue.size.times do
+        self.counter += 1
         all.push read_msg
       end
       all
@@ -57,8 +58,8 @@ module TaskVault
       queue_debug('Starting handler...')
       loop do
         start = Time.now.to_f
-        process_message until @queue.empty?
-        sleep_time = @interval - (Time.now.to_f - start)
+        process_message until queue.empty?
+        sleep_time = interval - (Time.now.to_f - start)
         sleep(sleep_time.negative? ? 0 : sleep_time)
       end
     end

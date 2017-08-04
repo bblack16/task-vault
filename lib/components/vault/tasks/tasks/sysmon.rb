@@ -9,7 +9,7 @@ module TaskVault
       attr_float_between 0, nil, :system_interval, default: 30, serialize: true, always: true
       attr_float_between 0, nil, :filesystems_interval, default: 120, serialize: true, always: true
       attr_float_between 0, nil, :processes_interval, default: 60, serialize: true, always: true
-      attr_hash :metrics, default: {}
+      attr_hash :metrics, default: {}, serialize: false
       attr_bool :cache, :send_aggregations, default: true, serialize: true, always: true
       attr_int :minimum_aggregations, default: 3, serialize: true, always: true
 

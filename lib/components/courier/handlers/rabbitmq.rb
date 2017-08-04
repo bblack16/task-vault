@@ -13,7 +13,7 @@ module TaskVault
       attr_bool :keep_alive, default: true, serialize: true
       attr_element_of [:json, :yaml, :string], :format, default: :json, serialize: true
       attr_ary_of [String, Symbol], :include_fields, :exclude_fields, default: nil, allow_nil: true, serialize: true
-      attr_reader :connection, :channel
+      attr_reader :connection, :channel, serialize: false
 
       component_aliases(:rabbitmq, :rabbit_mq)
 

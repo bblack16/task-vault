@@ -6,7 +6,7 @@ module TaskVault
     class MongoDB < Task
       attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_sym :collection, default: nil, allow_nil: true, serialize: true
-      attr_of Mongo::Client, :db
+      attr_of Mongo::Client, :db, serialize: false
 
       component_aliases(:mongo, :mongodb, :mongo_db)
 
@@ -21,7 +21,7 @@ module TaskVault
 
       protected
 
-      def lazy_init(*args)
+      def simple_init(*args)
         super
         named = BBLib.named_args(*args)
         return unless named.include?(:hosts) && named.include?(:database) || named.include?(:uri)

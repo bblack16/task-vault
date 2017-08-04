@@ -6,7 +6,7 @@ module TaskVault
     attr_ary_of Item, :items, default: [], serialize: true
     attr_int :interval, default: 60, serialize: true
     attr_int :capacity, default: 1000, allow_nil: true, serialize: true
-    attr_int :access_counter, default: 0
+    attr_int :access_counter, default: 0, serialize: false
 
     def start
       queue_info('Starting up component.')
@@ -99,7 +99,7 @@ module TaskVault
 
     protected
 
-    def lazy_init(*args)
+    def simple_init(*args)
       super
       require_relative 'api'
     end

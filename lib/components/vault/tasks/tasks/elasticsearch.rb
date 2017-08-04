@@ -5,7 +5,7 @@ module TaskVault
       attr_ary_of Hash, :queries, default: [], serialize: true, add_rem: true
       attr_bool :cache, default: false, serialize: true, always: true
       attr_int :cache_limit, default: 5, serialize: true, always: true
-      attr_of RestClient::Resource, :client
+      attr_of RestClient::Resource, :client, serialize: false
 
       component_aliases(:elasticsearch, :elasticsearch_query)
 

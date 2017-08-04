@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 require_relative 'handlers/_handlers'
+require_relative 'api'
 
 module TaskVault
   class Courier < ServerComponent
-    attr_valid_dir :path, allow_nil: true, serialize: true, always: true
+    attr_dir :path, allow_nil: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 0.5, serialize: true, always: true
     attr_int_between 1, nil, :load_interval, default: 120, allow_nil: true, serialize: true, always: true
     attr_ary_of MessageHandler, :message_handlers, default: [], serialize: true, always: true
     attr_sym :fallback, default: :default, allow_nil: true, serialize: true, always: true
+    attr_bool :recursive, default: false
 
     def start
       queue_info('Starting up component.')
@@ -97,7 +99,7 @@ module TaskVault
     end
 
     def save_all(format: :yaml)
-      @handlers.all? do |name, _data|
+      handlers.all? do |name, _data|
         begin
           save(name, format: format)
         rescue
@@ -107,7 +109,7 @@ module TaskVault
     end
 
     def reload
-      BBLib.scan_files(@path, '*.json', '*.yml', '*.yaml', recursive: @recursive).each do |file|
+      BBLib.scan_files(path, '*.json', '*.yml', '*.yaml', recursive: recursive?).each do |file|
         begin
           add(MessageHandler.load(file))
         rescue StandardError => e
@@ -154,10 +156,10 @@ module TaskVault
     protected
 
     def setup_defaults
-      require_relative 'api'
+
     end
 
-    def lazy_init(*args)
+    def simple_init(*args)
       super
       add(Handlers::TaskVaultHandler.new(name: :default)) if message_handlers.empty?
     end
@@ -166,17 +168,17 @@ module TaskVault
       index = 0
       loop do
         start = Time.now
-        if @load_interval && index.zero? && @path
+        if load_interval && index.zero? && path
           # LOAD message handlers from disk
-          queue_debug("Reloading message handlers from disk @ #{@path}: current total = #{@message_handlers.size}")
+          queue_debug("Reloading message handlers from disk @ #{path}: current total = #{message_handlers.size}")
           reload
-          queue_debug("Finished reloading message handlers: current total = #{@message_handlers.size}")
-          index = @load_interval.to_i
+          queue_debug("Finished reloading message handlers: current total = #{message_handlers.size}")
+          index = load_interval.to_i
         end
 
         components = [
-          @parent.components,
-          @message_handlers
+          parent.components,
+          message_handlers
         ].flatten.compact
 
         components.each do |component|
@@ -195,8 +197,8 @@ module TaskVault
           end
         end
 
-        index -= 1 if @load_interval
-        sleep_time = @interval - (Time.now.to_f - start.to_f)
+        index -= 1 if load_interval
+        sleep_time = interval - (Time.now.to_f - start.to_f)
         sleep(sleep_time.negative? ? 0 : sleep_time)
       end
     end

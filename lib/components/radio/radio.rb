@@ -6,7 +6,7 @@ module TaskVault
     attr_int_between 0, nil, :port, default: 2016, serialize: true, always: true
     attr_string :key, default: 'changeme', serialize: true, always: true
     attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true
-    attr_reader :controller
+    attr_reader :controller, serialize: false
 
     def start
       queue_msg('Starting up component.', severity: :info)
@@ -15,7 +15,7 @@ module TaskVault
 
     def stop
       queue_msg('Stopping component.', severity: :info)
-      @controller.stop
+      controller.stop
       super
     end
 
@@ -25,41 +25,41 @@ module TaskVault
     end
 
     def running?
-      @controller.running?
+      controller.running?
     end
 
     def method_missing(*args)
-      @controller.send(*args)
+      controller.send(*args)
     end
 
     def respond_to_missing?(method, include_private = false)
-      @controller.respond_to?(method) || super
+      controller.respond_to?(method) || super
     end
 
     protected
 
     def setup_defaults
-      @controller = Ava::Controller.new(port: @port, key: @key)
+      @controller = Ava::Controller.new(port: port, key: key)
     end
 
     def register_objects
-      ([@parent] + @parent.components).each do |component|
+      ([parent] + parent.components).each do |component|
         name = component.is_a?(TaskVault::Server) ? 'server' : component.name
-        @controller.register(name => component) if @components.empty? || @components.include?(component.name.to_s)
+        controller.register(name => component) if components.empty? || components.include?(component.name.to_s)
       end
     end
 
     def reset
-      @controller.key = @key
-      @controller.port = @port
+      controller.key = key
+      controller.port = port
       restart if running?
     end
 
     def run
-      @controller.start
+      controller.start
       sleep(1)
       register_objects
-      sleep(1) while @controller.running?
+      sleep(1) while controller.running?
     end
   end
 end

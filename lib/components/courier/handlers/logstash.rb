@@ -12,7 +12,7 @@ module TaskVault
       attr_ary_of [String, Symbol], :include_fields, :exclude_fields, default: nil, allow_nil: true, serialize: true
       attr_element_of TYPES, :type, default: :tcp, serialize: true
       attr_hash :options, default: {}, serialize: true
-      attr_reader :logger
+      attr_reader :logger, serialize: false
 
       component_aliases(:logstash, :logstash_logger)
 

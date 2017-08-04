@@ -36,7 +36,7 @@ module TaskVault
       end
 
       def build_time(time)
-        (time.is_a?(Time) ? time : Time.now).strftime(@time_format)
+        (time.is_a?(Time) ? time : Time.now).strftime(time_format)
       end
 
       def build_message(msg)
@@ -48,7 +48,7 @@ module TaskVault
       end
 
       def severity_check(severity)
-        SEVERITIES.keys.find_index(severity) <= SEVERITIES.keys.find_index(@level)
+        SEVERITIES.keys.find_index(severity) <= SEVERITIES.keys.find_index(level)
       rescue
         true
       end

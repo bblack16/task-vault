@@ -7,7 +7,7 @@ module TaskVault
       attr_element_of METHODS, :http_method, default: :get, serialize: true, always: true
       attr_hash :headers, default: {}, serialize: true, always: true
       attr_str :payload, default: nil, allow_nil: true, serialize: true, always: true, pre_proc: proc { |x| x.is_a?(Hash) ? x.to_json : x }
-      attr_of RestClient::Resource, :client
+      attr_of RestClient::Resource, :client, serialize: false
 
       component_aliases(:rest, :rest_call, :restcall)
 
@@ -22,7 +22,7 @@ module TaskVault
 
       protected
 
-      def lazy_init(*args)
+      def simple_init(*args)
         super
         named = BBLib.named_args(*args)
         return unless named.include?(:url)

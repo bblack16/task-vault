@@ -5,7 +5,7 @@ module TaskVault
       attr_hash :template, default: {}, serialize: true, always: true, to_serialize_only: true
       attr_ary_of [String, Symbol], :allowed, :banned, default: nil, allow_nil: true, serialize: true, always: true
       attr_str :base_name, default: 'spawn_', serialize: true, always: true
-      attr_int :counter, default: 0
+      attr_int :counter, default: 0, serialize: false
 
       component_aliases(:spawner)
 

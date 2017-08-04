@@ -1,4 +1,4 @@
-require_relative 'alerts/alert'
+# require_relative 'alerts/alert'
 require_relative 'component'
 require_relative 'server_component'
 require_relative 'sub_component'

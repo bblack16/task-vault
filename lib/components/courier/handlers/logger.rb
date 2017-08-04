@@ -2,7 +2,7 @@
 module TaskVault
   module Handlers
     class Logger < TaskVaultHandler
-      attr_valid_dir :path, default: Dir.pwd, serialize: true, always: true
+      attr_dir :path, default: Dir.pwd, serialize: true, always: true
       attr_string :file_name, default: 'task_vault', serialize: true, always: true
       attr_string :extension, default: 'log', serialize: true, always: true
       attr_string :file_time_format, default: '.%Y.%d', serialize: true, always: true

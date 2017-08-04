@@ -1,149 +1,87 @@
-require_relative 'task_api'
 
 module TaskVault
   class Vault < ServerComponent
 
-    def self.extract_task_route(route)
-      path  = route.split(/(?<=[^^])\/(?=[^$])/)
-      index = path.index('tasks') + 2
-      "/#{path[index..-1].join('/')}"
+    views_path File.expand_path('../app/views', __FILE__)
+
+    get '/' do
+      view_render :slim, :index
     end
 
-    def self._task_not_found
-      { status: 404, message: 'The requested task does not exist.' }
+    # def routes
+      # task_routes = {}
+      # all_tasks.each { |task| task_routes = task_routes.merge(task.routes) }
+      # super.merge(task_routes)
+    # end
+
+    def self.retrieve_assets(type, *args)
+      assets[type] + TaskVault::Task.descendants.flat_map { |d| d.retrieve_assets(type, *args) }
     end
 
-    protected
+    get_api '/' do
+      describe.merge(tasks: all_tasks.size)
+    end
 
-    def setup_routes
-      super
-
-      get '/tasks' do
-        if params[:fields]
-          component.task_list(*params[:fields].split(',').map(&:to_sym))
-        else
-          component.task_list(
-              :id, :name, :class, :status, :start_at, :weight, :run_count, :run_limit, :priority,
-              :initial_priority, :timeout, :repeat
-            )
-        end
+    get_api '/tasks' do
+      if params[:fields]
+        task_list(*params[:fields].split(',').map(&:to_sym))
+      else
+        task_list(
+            :id, :name, :class, :status, :start_at, :weight, :run_count, :run_limit, :priority,
+            :initial_priority, :timeout, :repeat
+          )
       end
+    end
 
-      get '/tasks/:id' do
-        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
-        task = component.find_by(name: params[:id]) unless task
-        if task
-          task.describe
-        else
-          TaskVault::Vault._task_not_found
-        end
+    post_api '/tasks' do
+      begin
+        add(params.keys_to_sym)
+      rescue => e
+        { status: 500, message: e }
       end
+    end
 
-      get '/tasks/:id/settings' do
-        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
-        task = component.find_by(name: params[:id]) unless task
-        if task
-          task.serialize
-        else
-          TaskVault::Vault._task_not_found
-        end
-      end
-
-      post '/tasks/:id/settings' do
-        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
-        task = component.find_by(name: params[:id]) unless task
-        if task
-          JSON.parse(request.body.read).map do |k, v|
-            if task.respond_to?("#{k}=")
-              task.send("#{k}=", *[v].flatten(1))
-              task.queue_debug("Changed method #{k} via Wasteland to #{BBLib.chars_up_to(v, 20, '... (first 20)')}. Request from #{request.ip}.", event: :audit)
-              [k, task.send(k)]
-            else
-              [k, nil]
-            end
-          end.to_h
-        else
-          TaskVault::Vault._task_not_found
-        end
-      end
-
-      get '/tasks/:id/logs' do
-        task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
-        task = component.find_by(name: params[:id]) unless task
-        if task
-          process_component_logs(task.history)
-        else
-          TaskVault::Vault._task_not_found
-        end
-      end
-
-      post '/tasks/add' do
-        begin
-          component.add(params.keys_to_sym)
-        rescue => e
-          { status: 500, message: e }
-        end
-      end
-
-      post '/tasks/cancel/:id' do
-        if params[:id].nil? || component.find(params[:id].to_i).nil?
-          { status: 404, success: false, request: :cancel, message: 'You must pass a valid task id.' }
-        else
-          good = component.cancel(params[:id].to_i)
-          { status: (good ? 200 : 400), success: good, request: :cancel }
-        end
-      end
-
-      post '/tasks/rerun/:id' do
-        if params[:id].nil? || component.find(params[:id].to_i).nil?
-          { status: 404, success: false, request: :rerun, message: 'You must pass a valid task id.' }
-        else
-          good = component.rerun(params[:id].to_i)
-          { status: (good ? 200 : 400), success: component.rerun(params[:id].to_i), request: :rerun }
-        end
-      end
-
-      delete '/tasks/:id' do
-        if params[:id].nil? || component.find(params[:id].to_i).nil?
-          { success: false, request: :delete_task, message: 'You must pass a valid task id.' }
-        else
-          good = !component.delete(params[:id].to_i).empty?
-          { status: (good ? 200 : 400), success: good, request: :delete_task, id: params[:id] }
-        end
-      end
-
-      get '/queues' do
-        component.tasks.map do |q, tasks|
-          [q, tasks.map { |task| { id: task.id, name: task.name, priority: task.priority, weight: task.weight } }]
-        end.to_h.merge(
-          {
-            weight: {
-              limit: component.limit,
-              running: component.running_weight,
-              percent: component.running_weight.to_f / component.limit.to_f
-            }
+    get_api '/queues' do
+      tasks.map do |q, tasks|
+        [q, tasks.map { |task| { id: task.id, name: task.name, priority: task.priority, weight: task.weight } }]
+      end.to_h.merge(
+        {
+          weight: {
+            limit: limit,
+            running: running_weight,
+            percent: running_weight.to_f / component.limit.to_f
           }
-        )
-      end
+        }
+      )
+    end
 
-      get '/queues/:queue' do
-        component.tasks[params[:queue].to_sym].map { |task| { id: task.id, name: task.name, priority: task.priority, weight: task.weight } }
-      end
+    get_api '/queues/:queue' do
+      tasks[params[:queue].to_sym].map { |task| { id: task.id, name: task.name, priority: task.priority, weight: task.weight } }
+    end
 
-      get '/registry' do
-        component.class.registry
-      end
+    get_api '/registry' do
+      self.class.registry
+    end
 
-      [:get, :post, :delete, :put].each do |verb|
-        send(verb, '/tasks/:id/*') do
-          task = component.find(params[:id].to_i) if params[:id] =~ /^\d+$/
-          task = component.find_by(name: params[:id]) unless task
-          if task
-            task.call_route(verb, TaskVault::Vault.extract_task_route(request.path_info), params, request)
-          else
-            { status: 404, message: "I've scavenged the Wasteland for that task. Alas, it does not exist!" }
-          end
+    BlockStack::VERBS.each do |verb|
+      send("#{verb}_api", '/tasks/:id/?*') do
+        task = find(params[:id].to_i) if params[:id] =~ /^\d+$/
+        task = find_by(name: params[:id]) unless task
+        if task
+          task.call_route(verb, request, params, @route_delegate)
+        else
+          { status: 404, message: "I've scavenged the Wasteland for that task. Alas, it does not exist!" }
         end
+      end
+    end
+
+    get '/tasks/:id/?*' do
+      task = find(params[:id].to_i) if params[:id] =~ /^\d+$/
+      task = find_by(name: params[:id]) unless task
+      if task
+        task.call_route(:get, request, params, @route_delegate)
+      else
+        { status: 404, message: "I've scavenged the Wasteland for that task. Alas, it does not exist!" }
       end
     end
   end

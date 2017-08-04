@@ -1,23 +1,28 @@
 # frozen_string_literal: true
 module TaskVault
-  class Component < BBLib::LazyClass
-    attr_of Object, :parent, allow_nil: true, default: nil
+  class Component
+    include BBLib::Effortless
+
+    attr_of Object, :parent, allow_nil: true, default: nil, serialize: false
     attr_sym :name, required: true, serialize: true
     attr_handlers :handlers, default: [:default], serialize: true, always: true, add_rem: true
     attr_int_between 0, nil, :history_limit, default: 100, serialize: true, always: true
     attr_int_between 0, nil, :message_limit, default: 100_000, serialize: true, always: true
     attr_hash :metadata, default: {}, serialize: true, always: true
     attr_bool :use_inventory, default: true, serialize: true, always: true
-    attr_hash :inventory_items, default: {}, serialize: true, always: true, to_serialize_only: true
-    attr_of Hash, :event_handlers, default: {}, serialize: true, to_serialize_only: true
-    attr_reader :message_queue, :thread, :started, :stopped, :history
+    attr_hash :inventory_items, default: {}, serialize: true, always: true
+    attr_of Hash, :event_handlers, default: {}, serialize: true
+    attr_reader :message_queue, :thread, :started, :stopped, :history, serialize: false
 
-    after :register_handlers, *attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:lazy_init, :parent=, :add_handlers]
-    after :register_event_handlers, :event_handlers=, :parent=, :add_event_handler
-    after :reset_inventory_items, :inventory_items=, :parent=
+    # after :*attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:simple_init, :parent=, :add_handlers, :register_handlers]
+    after :event_handlers=, :parent=, :register_event_handlers
+    after :inventory_items=, :parent=, :reset_inventory_items
+
+    serialize_method :class, :_class_s, always: true
+    init_type :loose
 
     def self.new(*args, &block)
-      after :_expand_item, *instance_getters, send_value: true, modify_value: true
+      after *(instance_readers + [:_expand_item]), send_value: true, modify_value: true
       super
     end
 
@@ -59,12 +64,12 @@ module TaskVault
         event:    :general,
         _source:   self
       }.merge(compile_msg_data(**data))
-      @history.unshift(msg.dup) unless msg[:severity] == :data
-      @message_queue.push(msg)
-      @history.pop while @history.size > @history_limit
-      @message_queue.shift while @message_queue.size > @message_limit
+      history.unshift(msg.dup) unless msg[:severity] == :data
+      message_queue.push(msg)
+      history.pop while history.size > history_limit
+      message_queue.shift while message_queue.size > message_limit
     rescue => e
-      @message_queue.push({ msg: e, severity: :fatal })
+      message_queue.push({ msg: e, severity: :fatal })
     end
 
     alias queue_message queue_msg
@@ -76,19 +81,31 @@ module TaskVault
     end
 
     def read_msg
-      @message_queue.shift
+      message_queue.shift
     end
 
     def read_all_msgs
       all = []
-      @message_queue.size.times do
+      message_queue.size.times do
         all.push read_msg
       end
       all
     end
 
     def has_msg?
-      !@message_queue.empty?
+      !message_queue.empty?
+    end
+
+    def describe
+      {
+        name:        name,
+        class:       self.class,
+        description: description,
+        running:     running?,
+        uptime:      uptime,
+        started:     started,
+        stopped:     stopped
+      }
     end
 
     def inventory
@@ -147,7 +164,7 @@ module TaskVault
     end
 
     def history_msgs
-      @history.map { |h| h[:msg] }
+      history.map { |h| h[:msg] }
     end
 
     def event_handlers=(handlers)
@@ -186,7 +203,8 @@ module TaskVault
 
     protected
 
-    def lazy_setup
+    def simple_setup
+      @name          = self.class.to_s.split('::').last.downcase.snake_case
       @parent        = nil
       @thread        = nil
       @started       = nil
@@ -195,20 +213,16 @@ module TaskVault
       @message_queue = []
       @history       = []
       setup_defaults
-      serialize_method :class, :_class_s, always: true
     end
 
     def setup_defaults
       # Reserved for child classes to setup their own default variables/methods
     end
 
-    def lazy_init(*args)
+    def simple_init(*args)
       named = BBLib.named_args(*args)
       self.parent = named[:parent] if named.include?(:parent)
       init_thread if named[:start]
-      # extend PutsQueue unless named.include?(:no_puts)
-      # reset_inventory_items
-      super
     end
 
     def init_thread
@@ -302,7 +316,7 @@ module TaskVault
     end
 
     def _expand_item(item)
-      return item unless @use_inventory && item.is_a?(TaskVault::Inventory::Item)
+      return item unless use_inventory && item.is_a?(TaskVault::Inventory::Item)
       item.value
     end
   end
