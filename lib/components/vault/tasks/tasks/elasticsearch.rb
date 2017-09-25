@@ -50,7 +50,7 @@ module TaskVault
       # Redefine this method in subclasses to do things with query results.
       def process_result(result, query)
         count = result.hpath('hits.total').first
-        queue_debug("Found a total of #{count} #{BBLib.pluralize(count, 'result')} for #{BBLib.chars_up_to(query, 50, '..')}.")
+        queue_debug("Found a total of #{count} #{BBLib.plural_string(count, 'result')} for #{BBLib.chars_up_to(query, 50, '..')}.")
         queue_data(result, event: :result, query: query)
         queue_data(result.hpath('hits.hits').first, event: :hits, query: query)
         result.hpath('hits.hits').first.each do |hit|

@@ -42,7 +42,7 @@ module TaskVault
 
       def run
         connect
-        queue_debug("Starting up. About to run #{queries.size} #{BBLib.pluralize(queries.size, 'quer', 'ies', 'y')}.")
+        queue_debug("Starting up. About to run #{queries.size} #{BBLib.plural_string(queries.size, 'quer', 'ies', 'y')}.")
         queries.each do |query|
           result = db.fetch(query)
           result = result.to_a if format == :array

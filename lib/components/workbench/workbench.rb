@@ -109,9 +109,9 @@ module TaskVault
           recipes.each do |file, _data|
             remove(file) unless File.exist?(file)
           end
-          queue_debug("Workbench is finished loading recipes from disk. Currently managing #{recipes.size} total #{BBLib.pluralize(recipes.size, 'recipe')}.")
+          queue_debug("Workbench is finished loading recipes from disk. Currently managing #{recipes.size} total #{BBLib.plural_string(recipes.size, 'recipe')}.")
         else
-          queue_warn("#{path} does not exist. No recipes will be loaded...")
+          queue_warn("#{path}/recipes does not exist. No recipes will be loaded...")
         end
         sleep_time = interval - (Time.now.to_f - start.to_f)
         sleep(sleep_time.zero? ? 0 : sleep_time)
