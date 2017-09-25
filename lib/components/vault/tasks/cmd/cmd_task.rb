@@ -8,7 +8,7 @@ module TaskVault
       attr_dir :working_directory, allow_nil: true, serialize: true, always: true, pre_proc: proc { |x| x.to_s.empty? ? nil : x }
       attr_array :arguments, default: [], serialize: true, always: true
 
-      views_path File.expand_path('../app/views', __FILE__)
+      # views_path File.expand_path('../app/views', __FILE__)
 
       alias cmd= command=
       alias cmd command
@@ -30,9 +30,9 @@ module TaskVault
         cmd.join(' ')
       end
 
-      get '/' do
-        view_render :slim, :index
-      end
+      # get '/' do
+      #   view_render :slim, :index
+      # end
 
       protected
 

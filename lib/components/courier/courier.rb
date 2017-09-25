@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 require_relative 'handlers/_handlers'
-require_relative 'api'
+# require_relative 'api'
 
 module TaskVault
   class Courier < ServerComponent

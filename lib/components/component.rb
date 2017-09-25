@@ -15,14 +15,14 @@ module TaskVault
     attr_reader :message_queue, :thread, :started, :stopped, :history, serialize: false
 
     # after :*attrs.find_all { |_n, o| o[:type] == :handler }.map(&:first).map { |r| "#{r}=".to_sym } + [:simple_init, :parent=, :add_handlers, :register_handlers]
-    after :event_handlers=, :parent=, :register_event_handlers
-    after :inventory_items=, :parent=, :reset_inventory_items
+    # after :event_handlers=, :parent=, :register_event_handlers
+    # after :inventory_items=, :parent=, :reset_inventory_items
 
     serialize_method :class, :_class_s, always: true
     init_type :loose
 
     def self.new(*args, &block)
-      after *(instance_readers + [:_expand_item]), send_value: true, modify_value: true
+      # after *(instance_readers + [:_expand_item]), send_value: true, modify_value: true
       super
     end
 
