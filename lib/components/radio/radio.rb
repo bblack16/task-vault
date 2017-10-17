@@ -7,7 +7,6 @@ module TaskVault
     attr_string :key, default: 'changeme', serialize: true, always: true
     attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true
     attr_of Ava::Controller, :controller, default_proc: proc { |x| Ava::Controller.new(port: x.port, key: x.key) }
-    attr_reader :controller, serialize: false
 
     def start
       queue_msg('Starting up component.', severity: :info)
