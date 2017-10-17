@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module TaskVault
   class Radio < ServerComponent
-    after :reset, :port=, :key=
+    after :port=, :key=, :reset
 
     attr_int_between 0, nil, :port, default: 2016, serialize: true, always: true
     attr_string :key, default: 'changeme', serialize: true, always: true
