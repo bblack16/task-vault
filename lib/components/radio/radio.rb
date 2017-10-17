@@ -6,6 +6,7 @@ module TaskVault
     attr_int_between 0, nil, :port, default: 2016, serialize: true, always: true
     attr_string :key, default: 'changeme', serialize: true, always: true
     attr_array_of String, :components, default: [], add_rem: true, serialize: true, always: true
+    attr_of Ava::Controller, :controller, default_proc: proc { |x| Ava::Controller.new(port: x.port, key: x.key) }
     attr_reader :controller, serialize: false
 
     def start
@@ -37,10 +38,6 @@ module TaskVault
     end
 
     protected
-
-    def setup_defaults
-      @controller = Ava::Controller.new(port: port, key: key)
-    end
 
     def register_objects
       ([parent] + parent.components).each do |component|
