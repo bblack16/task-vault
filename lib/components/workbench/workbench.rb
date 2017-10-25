@@ -1,125 +1,121 @@
-module TaskVault
+# frozen_string_literal: true
+require_relative 'api'
 
-  class Workbench < Component
-    attr_valid_dir :path, allow_nil: true, serialize: true, always: true
+module TaskVault
+  class Workbench < ServerComponent
+    attr_dir :path, allow_nil: true, serialize: true, always: true, mkdir: true
     attr_bool :recursive, default: true, serialize: true, always: true
     attr_float_between 0.001, nil, :interval, default: 60, serialize: true, always: true
-    attr_reader :recipes
+    attr_sym :vault_name, default: :vault, serialize: true, always: true
+    attr_int :id, default: -1, serialize: true, always: true
+    attr_reader :recipes, serialize: false
 
     def start
-      queue_msg("Starting up component.", severity: :info)
+      queue_info('Starting up component.')
       super
     end
 
     def stop
-      queue_msg("Stopping component.", severity: :info)
+      queue_info('Stopping component.')
       super
     end
 
-    def add recipe
-      recipe = recipe.serialize if recipe.is_a?(Task)
-      raise ArgumentError, "Recipes must contain a name field." unless recipe[:name]
-      if existing = @recipes[recipe[:name].to_sym]
+    def self.description
+      'Workbench allows tasks to be loaded from disk. It also ensures changes to those ' \
+      'files automatically update the currently running tasks. Workbench needs a running instance ' \
+      'of vault to be useful.'
+    end
+
+    def vault
+      parent.component(vault_name)
+    end
+
+    def read(file)
+      recipe = YAML.load_file(file) if file.end_with?('.yml', '.yaml')
+      recipe = JSON.parse(File.read(file)) if file.end_with?('.json')
+      raise ArgumentError, "#{file} does not appear to be a valid recipe type." unless recipe
+      if existing = recipes[file]
         if existing[:recipe] != recipe
           existing[:task].reload(recipe)
-          queue_msg("Task #{recipe[:name]} has been updated and reloaded.", severity: :info)
+          queue_info("Task #{existing[:task].name} has been updated and reloaded.")
         end
       else
-        @recipes[recipe[:name].to_sym] = { recipe: recipe, task: Task.load(recipe.dup) }
-        queue_msg("New task '#{recipe[:name]}' has been added.", severity: :info)
-        save(recipe[:name].to_sym)
+        recipes[file] = { recipe: recipe, task: Task.load(recipe.dup), id: next_id }
+        queue_info("New task '#{recipes[file][:task].name}' has been added.")
       end
-      @parent.vault.add(@recipes[recipe[:name].to_sym][:task])
-      recipe[:name].to_sym
+      vault.add(recipes[file][:task])
     end
 
-    alias_method :add_recipe, :add
+    alias reload load
 
-    def save name, format: :yml
-      if recipe = @recipes[name.to_sym]
-        task = recipe[:task]
-        path = "#{@path}/recipes/#{task.name}".pathify
-        queue_msg("Saving task #{name} at #{path}.#{format}", severity: :debug)
-        case format
-        when :yaml, :yml
-          path += '.yml'
-          task.serialize.to_yaml.to_file(path, mode: 'w')
-        when :json
-          path += '.json'
-          task.serialize.to_json.to_file(path, mode: 'w')
-        else
-          raise ArgumentError, "Invalid format '#{format}'. Must be :yaml or :json."
-        end
-        File.exists?(path)
-      else
-        queue_msg("Failed to save recipe #{name} because it does not exist!", severity: :warn)
-        false
-      end
+    def add(hash, format: :yaml)
+      hash = hash.serialize if Hash.is_a?(Task)
+      raise ArgumentError, "Invalid format '#{format}'. Must be :yaml or :json." unless [:yaml, :json].include?(format)
+      raise ArgumentError, 'You must pass a hash to save a new workbench item.' unless hash.is_a?(Hash)
+      raise ArgumentError, 'Your recipe must containg a name.' unless hash[:name]
+      path = "#{path}/recipes/#{hash[:name]}".pathify
+      queue_info("Saving task #{name} at #{path}.#{format}")
+      hash.send("to_#{format}").to_file(path, mode: 'w')
+      read(path)
     end
 
-    def save_all format: :yaml
-      queue_msg("Saving all recipes in workbench to #{@path}: #{@recipes.size} total.", severity: :debug)
-      @recipes.each do |name, data|
-        save(name, format: format)
-      end
+    alias add_recipe add
+
+    def recipe(id)
+      recipe = recipes.find { |_k, v| v[:id] == id }
+      return unless recipe
+      [recipe].to_h
     end
 
-    def remove name
-      if @recipes.include?(name)
-        queue_msg("Removing recipe '#{name}' from Workbench.", severity: :info)
-        @recipes.delete(name)[:task].cancel
-      end
+    def remove(name)
+      return unless recipes.include?(name)
+      queue_msg("Removing recipe '#{name}' from Workbench.", severity: :info)
+      recipes.delete(name)[:task].cancel
     end
 
-    def delete name
-      remove(name)
-      BBLib::scan_files(@path, filter: ['*.json', '*.yml', '*.yaml'], recursive: true).map do |file|
-        queue_msg("Deleting recipe file on disk for '#{name}': #{file}", severity: :info)
-        File.delete(file)
-      end
+    def delete(file)
+      remove(file)
+      File.delete(file)
+      !File.exist?(file) && !recipes[file]
     end
 
-    def load_recipes path = @path
-      BBLib.scan_files( "#{@path}/recipes/".pathify, filter: ['*.yaml', '*.yml', '*.json'], recursive: @recursive).map do |file|
+    def load_recipes
+      BBLib.scan_files("#{path}/recipes/".pathify, '*.yaml', '*.yml', '*.json', recursive: recursive).map do |file|
         begin
-          recipe = YAML.load_file(file) if file.end_with?('.yml') || file.end_with?('.yaml')
-          recipe = JSON.parse(File.read(file)) if file.end_with?('.json')
-          add(recipe)
-        rescue StandardError => e
-          queue_msg e, severity: :error
-          queue_msg "Workbench failed to construct task from file '#{file}'. It will not be added to the task queue or workbench.", severity: :warn
+          read(file)
+        rescue => e
+          queue_warn("Workbench failed to construct task from file '#{file}'. It will not be added to the task queue or workbench")
+          queue_error(e)
         end
       end
     end
 
     protected
 
-      def setup_defaults
-        @recipes = Hash.new
-      end
+    def setup_defaults
+      @recipes = {}
+    end
 
-      def run
-        loop do
-          start = Time.now
-          queue_msg("Workbench is now reloading recipes from disk.", severity: :debug)
-          current_recipes = load_recipes
-          @recipes.each do |name, data|
-            remove(name) unless current_recipes.include?(name)
+    def next_id
+      self.id += 1
+    end
+
+    def run
+      loop do
+        start = Time.now
+        if path && Dir.exist?("#{path}/recipes")
+          queue_msg('Workbench is now reloading recipes from disk.', severity: :debug)
+          load_recipes
+          recipes.each do |file, _data|
+            remove(file) unless File.exist?(file)
           end
-          sleep_time = @interval - (Time.now.to_f - start.to_f)
-          queue_msg("Workbench is finished loading recipes from disk. Currently managing #{@recipes.size} total recipes. Next run is in #{sleep_time.to_duration}.", severity: :debug)
-          sleep(sleep_time < 0 ? 0 : sleep_time)
-        end
-      end
-
-      def changed? task, new_recipe
-        if recipe = @recipes[task.name]
-          recipe[:recipe] != new_recipe
+          queue_debug("Workbench is finished loading recipes from disk. Currently managing #{recipes.size} total #{BBLib.plural_string(recipes.size, 'recipe')}.")
         else
-          true
+          queue_warn("#{path}/recipes does not exist. No recipes will be loaded...")
         end
+        sleep_time = interval - (Time.now.to_f - start.to_f)
+        sleep(sleep_time.zero? ? 0 : sleep_time)
       end
-
+    end
   end
-
 end

@@ -1,0 +1,12 @@
+== opal_include('test')
+
+h1.text-center Welcome to the Wasteland!
+
+-parent.components.each do |component|
+  li
+    a href="/components/#{component.name}" = component.name
+
+- self.class.opal.sprockets.paths.each do |sp|
+  li = sp
+
+= find_template("indexx", "indxex", :slim) { 'test' }
