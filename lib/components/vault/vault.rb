@@ -218,8 +218,8 @@ module TaskVault
     end
 
     def move_task(task, status)
+      status = :queued if status == :timeout && task.calculate_start_time
       move_to = tasks[STATUSES[status]]
-      move_to = :queued if status == :timeout && task.calculate_start_time
       task = self.task(task) if task.is_a?(Integer)
       tasks.each do |_name, queue|
         if queue.include?(task)
