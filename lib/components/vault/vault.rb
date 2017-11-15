@@ -224,6 +224,7 @@ module TaskVault
       tasks.each do |_name, queue|
         if queue.include?(task)
           task.status = status
+          task.status = :queued if status == :timeout && task.calculate_start_time
           move_to.push(queue.delete(task))
         end
       end
