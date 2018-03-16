@@ -1,0 +1,162 @@
+module TaskVault
+  class Task
+    include Runnable
+
+    def message_queue
+      if parent && parent != self
+        parent.message_queue
+      else
+        super
+      end
+    end
+
+    protected
+
+    def simple_setup
+      self.parent = TaskVault::Overseer.prototype
+    end
+
+    # attr_float :size, default: 1
+    # attr_int_between 0, nil, :priority, default: 10
+    # attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true
+    # attr_float_between 0, nil, :timeout, :elevate_interval, default: nil, allow_nil: true
+    # attr_of [String, Integer, TrueClass, FalseClass, Range], :repeat, default: false, allow_nil: true
+    # attr_float :delay, default: nil, allow_nil: true
+    # attr_time :start_at, :stop_at, default: nil, allow_nil: true
+    # attr_element_of STATUSES.keys, :status, default: :created, serialize: false
+    # attr_int :run_count, default: 0, serialize: false, protected_writer: true
+    # attr_time :created, :queued, :added, :finished, :last_elevated, default: nil, allow_nil: true
+    # attr_int :initial_priority, default: nil, allow_nil: true, protected_writer: true, serialize: false
+    #
+    # after :status=, :status_update
+    # after :start, :reset_start_at
+    # after :priority=, :set_initial_priority
+    #
+    # def start
+    #   super.tap do |result|
+    #     if result
+    #       self.status = :running
+    #       self.run_count += 1
+    #     end
+    #   end
+    # end
+    #
+    # def name
+    #   "#{id} (#{self.class})"
+    # end
+    #
+    # def cancel
+    #   info("Cancelling task #{name}...")
+    #   self.status = :canceled
+    #   stopped?
+    # end
+    #
+    # def timeout!
+    #   info("Task #{name} has timedout.")
+    #   self.status = :timedout
+    #   stopped?
+    # end
+    #
+    # def timeout?
+    #   running? && timeout && Time.now - started > timeout
+    # end
+    #
+    # def finished?
+    #   STATUSES[self.status][:queue] == :finished
+    # end
+    #
+    # def rerun
+    #   # TODO
+    # end
+    #
+    # def elevate
+    #   self.last_elevated = Time.now
+    #   self.priority = BBLib.keep_between(priority - 1, 0, 6)
+    # end
+    #
+    # def elevate?(interval = self.elevate_interval)
+    #   return false unless interval
+    #   Time.now >= (lasted_elevated || created) + interval
+    # end
+    #
+    # def update(*args, &block)
+    #   simple_init(*args, &block)
+    # end
+    #
+    # def starts_at
+    #   return nil unless repeat || run_count.zero?
+    #   return nil if status == :canceled
+    #   return nil if stop_at && stop_at >= Time.now
+    #   return nil if run_limit && run_limit >= run_count
+    #   return start_at if start_at
+    #   self.start_at = case repeat
+    #   when TrueClass
+    #     Time.now
+    #   when FalseClass, NilClass
+    #     run_count.zero? ? Time.now : (return nil)
+    #   when Integer, Float
+    #     repeat > run_count ? Time.now : (return nil)
+    #   when Range
+    #     Time.now + rand(repeat)
+    #   when Time
+    #     repeat
+    #   else
+    #     expression = repeat.to_s
+    #     if expression =~ /^every/i
+    #       run_count.positive? ? Time.at(started + repeat.parse_duration(output: :sec)) : Time.now
+    #     elsif expression =~ /^after/i
+    #       run_count.positive? ? Time.at(finished + repeat.parse_duration(output: :sec)) : Time.now
+    #     elsif BBLib::Cron.valid?(expression)
+    #       BBLib::Cron.next(express, time: (run_count.positive? ? Time.now : created))
+    #     else
+    #       return nil
+    #     end
+    #   end + (delay || 0)
+    # end
+    #
+    # def repeat?
+    #   starts_at ? true : false
+    # end
+    #
+    # def ready?
+    #   starts_at && Time.now >= starts_at
+    # end
+    #
+    # protected
+    #
+    # def reset_start_at
+    #   self.start_at = nil
+    # end
+    #
+    # def status_update
+    #   case status
+    #   when :created
+    #     self.created = Time.now
+    #     debug("New task created: #{name}")
+    #   when :queued
+    #     self.queued = Time.now
+    #     debug("Task #{name} is now queued.")
+    #   when :running
+    #     self.started = Time.now
+    #     debug("Task #{name} is now running.")
+    #   when :finished
+    #     self.finished = Time.now
+    #     self.priority = initial_priority
+    #     debug("Task #{name} is now finished running after #{timer.last.to_duration}.")
+    #   when :errored, :canceled, :timedout
+    #     self.finished = Time.now
+    #     self.priority = initial_priority
+    #     warn("Task #{name} is now finished but was #{status} after #{timer.last.to_duration}.")
+    #     stop if running?
+    #   else
+    #     warn("Changed to unknown status for #{name}.")
+    #   end
+    # end
+    #
+    # def set_initial_priority
+    #   return if initial_priority
+    #   self.initial_priority = priority
+    # end
+
+  end
+end

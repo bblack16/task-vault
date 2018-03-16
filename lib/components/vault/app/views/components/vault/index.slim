@@ -1,9 +1,0 @@
-h1.text-center Hello, I am Vault!
-
-p.text-center Hello there
-hr
-br
-h4.text-center = "Running Tasks: #{component.all_tasks.size}"
-
-- component.all_tasks.each do |task|
-  a.btn.btn-primary href="/components/vault/tasks/#{task.id}" = "#{task.id} - #{task.name}"

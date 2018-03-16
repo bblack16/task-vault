@@ -1,14 +1,17 @@
-# frozen_string_literal: true
+require 'bblib' unless defined?(BBLib::VERSION)
+require 'securerandom'
+
 require_relative 'task_vault/version'
 
-require 'bblib' unless defined?(BBLib::VERSION)
-require 'ava' unless defined?(Ava::VERSION)
-require 'yaml'
-require 'json'
+require_relative 'task_vault/general/puts_override'
 
-require_relative 'bblib/attrs'
-require_relative 'components/_components'
-require_relative 'server/server'
+require_relative 'task_vault/general/runnable'
 
-module TaskVault
+require_relative 'task_vault/components/task'
+require_relative 'task_vault/components/overseer'
+require_relative 'task_vault/components/courier'
+require_relative 'task_vault/server/server'
+
+BBLib.scan_files(File.expand_path('../task_vault/components/tasks', __FILE__), '*.rb') do |file|
+  require_relative file
 end
