@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 module TaskVault
-  VERSION = '0.3.0'
+  VERSION = '1.0.1'.freeze
 end
