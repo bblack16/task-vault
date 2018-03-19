@@ -2,14 +2,6 @@ module TaskVault
   class Task
     include Runnable
 
-    def message_queue
-      if parent && parent != self
-        parent.message_queue
-      else
-        super
-      end
-    end
-
     attr_float :weight, default: 1
     attr_int_between 0, nil, :priority, default: 10
     attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true
@@ -26,6 +18,14 @@ module TaskVault
     after :status=, :status_update
     after :start, :reset_start_at
     after :priority=, :set_initial_priority
+
+    def message_queue
+      if parent && parent != self
+        parent.message_queue
+      else
+        super
+      end
+    end
 
     def start
       super.tap do |result|

@@ -56,11 +56,11 @@ module TaskVault
       components.all?(&:running?)
     end
 
-    def queue_task(task)
+    def queue(task, &block)
       start unless running?
       overseer = components.find { |component| component.is_a?(Overseer) }
       return false unless overseer
-      overseer.add(task)
+      overseer.add(task, &block)
     end
 
     def create_task(opts = {}, &block)
@@ -100,7 +100,7 @@ module TaskVault
     end
 
     def _default_components
-      [Overseer.prototype, Courier.prototype]
+      [Overseer.prototype, Courier.prototype, Workbench.prototype]
     end
 
     def register_components

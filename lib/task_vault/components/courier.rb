@@ -1,6 +1,6 @@
-require_relative 'message_handler'
+require_relative '../message_handler'
 
-BBLib.scan_files(File.expand_path('../message_handlers', __FILE__), '*.rb') do |file|
+BBLib.scan_files(File.expand_path('../../message_handlers', __FILE__), '*.rb') do |file|
   require_relative file
 end
 
@@ -10,7 +10,7 @@ module TaskVault
     include BBLib::Prototype
 
     attr_of Object, :parent, default_proc: proc { TaskVault::Server.prototype }
-    attr_ary_of MessageHandler, :handlers, default_proc: proc { [MessageHandlers::Logger.new] }, add_rem: true, adder_name: :add, remover_name: :remove
+    attr_ary_of MessageHandler, :handlers, default_proc: proc { [MessageHandlers::Default.new] }, add_rem: true, adder_name: :add, remover_name: :remove
 
     def process(message)
       handlers.each do |handler|

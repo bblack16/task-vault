@@ -9,12 +9,14 @@ module TaskVault
 
     alias components tasks
 
-    def add(task)
-      task = Task.new(task) if task.is_a?(Hash)
+    def add(task, &block)
+      task = Task.new(task, &block) if task.is_a?(Hash)
       return find(task) if tasks.include?(task)
-      task.status = :queued
-      task.parent = self
-      tasks << task
+      task.tap do |task|
+        task.status = :queued
+        task.parent = self
+        tasks << task
+      end
     end
 
     def remove(task)

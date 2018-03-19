@@ -3,15 +3,15 @@ require 'securerandom'
 
 require_relative 'task_vault/version'
 
-require_relative 'task_vault/general/puts_override'
+require_relative 'task_vault/puts_override'
+require_relative 'task_vault/runnable'
 
-require_relative 'task_vault/general/runnable'
-
-require_relative 'task_vault/components/task'
+require_relative 'task_vault/task'
 require_relative 'task_vault/components/overseer'
 require_relative 'task_vault/components/courier'
-require_relative 'task_vault/server/server'
+require_relative 'task_vault/components/workbench'
+require_relative 'task_vault/server'
 
-BBLib.scan_files(File.expand_path('../task_vault/components/tasks', __FILE__), '*.rb') do |file|
+BBLib.scan_files(File.expand_path('../task_vault/tasks', __FILE__), '*.rb') do |file|
   require_relative file
 end
