@@ -35,8 +35,10 @@ module TaskVault
       return if queue.empty? || processing_thread && processing_thread.alive?
       self.processing_thread = Thread.new do
         until queue.empty?
+          file = queue.shift
+          processed.push(file)
           begin
-            process_file(queue.shift)
+            process_file(file)
           rescue => e
             error(e)
           end
@@ -50,12 +52,11 @@ module TaskVault
     rescue => e
       error(e)
     ensure
-      processed.push(file)
       debug("Finished processing #{file}")
     end
 
     def process_removal(file)
-      debug("File #{file} has been removed from the #{BBLib.plural_string(paths.size, 'directory')}.")
+      debug("File #{file} has been removed from the director#{paths.size == 1 ? 'y' : 'ies'}.")
       removed_processor.call(file) if removed_processor
     rescue => e
       error(e)

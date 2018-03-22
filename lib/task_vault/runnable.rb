@@ -17,9 +17,9 @@ module TaskVault
     def self.included(base)
       base.send(:include, BBLib::Effortless)
       base.send(:include, BBLib::TypeInit)
-      base.send(:attr_of, Object, :parent, default_proc: proc { TaskVault::Overseer.prototype }, allow_nil: true, default: nil)
+      base.send(:attr_of, Object, :parent, default_proc: proc { TaskVault::Overseer.prototype }, allow_nil: true, default: nil, serialize: false)
       base.send(:attr_str, :id, default_proc: :generate_id)
-      base.send(:attr_str, :name, default_proc: proc { |x| "#{x.type}_#{x.id}"})
+      base.send(:attr_str, :name, default_proc: proc { |x| x.id })
       base.send(:attr_float_between, 0, nil, :interval, default: nil, allow_nil: true)
       base.send(:attr_hash, :metadata)
       base.send(:attr_of, Thread, :thread, default: nil, allow_nil: true, private_writer: true, serialize: false)
@@ -107,7 +107,7 @@ module TaskVault
     protected
 
     def finished_run
-      debug("#{name} has finished running after #{timer.last.to_duration}.")
+      debug("#{name} has finished running after #{(timer.current || timer.last).to_duration}.")
     end
 
     def init_thread(*args, &block)

@@ -15,3 +15,7 @@ require_relative 'task_vault/server'
 BBLib.scan_files(File.expand_path('../task_vault/tasks', __FILE__), '*.rb') do |file|
   require_relative file
 end
+
+BBLib.scan_files(File.expand_path('../task_vault/specialty_tasks', __FILE__), '*.rb') do |file|
+  require_relative file
+end

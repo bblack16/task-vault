@@ -13,15 +13,16 @@ module TaskVault
     end
 
     def process(file)
-      if exists?(file)
+      if exist?(file)
         task = overseer.find(recipes[file][:id])
         return task unless modified?(file)
         task.update(read(file))
+        recipes[file][:checksum] = checksum(file)
         task
       else
         debug("New task detected at #{file}. Attempting to load it now.")
         task = Task.new(read(file))
-        recipes[file] = { checksum: checksum, id: task.id }
+        recipes[file] = { checksum: checksum(file), id: task.id }
         overseer.add(task)
       end
     end
@@ -34,12 +35,12 @@ module TaskVault
       end.keys_to_sym
     end
 
-    def exists?(file)
+    def exist?(file)
       recipes.include?(file)
     end
 
     def modified?(file)
-      exists?(file) && checksum(file) != recipes[file][:checksum]
+      exist?(file) && checksum(file) != recipes[file][:checksum]
     end
 
     def checksum(file)
@@ -73,7 +74,7 @@ module TaskVault
 
     protected
 
-    def setup_defaults
+    def simple_setup
       require 'digest'
       self.interval = 60
     end

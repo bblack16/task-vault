@@ -11,9 +11,9 @@ module TaskVault
     attr_time :start_time, :stop_time, default: nil, allow_nil: true
     attr_element_of STATUSES.keys, :status, default: :created, serialize: false
     attr_int :run_count, default: 0, serialize: false, protected_writer: true
-    attr_time :created, :queued, :added, :finished, :last_elevated, default: nil, allow_nil: true
+    attr_time :created, :queued, :added, :finished, :last_elevated, default: nil, allow_nil: true, serialize: false
     attr_int :initial_priority, default: nil, allow_nil: true, protected_writer: true, serialize: false
-    attr_time :start_at, default: nil, allow_nil: true
+    attr_time :start_at, default: nil, allow_nil: true, serialize: false
 
     after :status=, :status_update
     after :start, :reset_start_at
@@ -79,7 +79,7 @@ module TaskVault
     end
 
     def update(*args, &block)
-      simple_init(*args, &block)
+      _initialize(*args, &block)
     end
 
     def start_at

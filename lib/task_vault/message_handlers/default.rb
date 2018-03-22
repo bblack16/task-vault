@@ -17,7 +17,7 @@ module TaskVault
       def format_message(message)
         str = message[:message]
         if str.is_a?(Exception)
-          str = "#{e}\n\t#{e.backtrace.join("\n\t")}"
+          str = "#{str}\n\t#{str.backtrace.join("\n\t")}"
         else
           str = str.to_s
         end

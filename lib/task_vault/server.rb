@@ -48,6 +48,10 @@ module TaskVault
       true
     end
 
+    def component_of(klass)
+      components.find { |component| component.is_a?(klass) }
+    end
+
     def running?
       components.any?(&:running?)
     end
