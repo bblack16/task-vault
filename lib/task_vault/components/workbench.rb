@@ -89,7 +89,7 @@ module TaskVault
         end
         debug("Workbench is now managing #{BBLib.plural_string(recipes.size, 'recipe')}.") if recipes.size != start_count
       else
-        debug("No paths are currently configured in #{name}. Skipping iteration...")
+        debug("No paths are currently configured. Skipping iteration...")
         return false
       end
     end
