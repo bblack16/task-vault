@@ -81,12 +81,13 @@ module TaskVault
 
     def run(*args, &block)
       unless paths.empty?
+        start_count = recipes.size
         files = paths.flat_map { |path| load_recipes(path) }
         recipes.each do |file, _info|
           next if files.include?(file)
           remove(file)
         end
-        debug("Workbench is now managing #{BBLib.plural_string(recipes.size, 'recipe')}.")
+        debug("Workbench is now managing #{BBLib.plural_string(recipes.size, 'recipe')}.") if recipes.size != start_count
       else
         debug("No paths are currently configured in #{name}. Skipping iteration...")
         return false
