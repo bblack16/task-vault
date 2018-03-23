@@ -21,7 +21,7 @@ module TaskVault
         else
           str = str.to_s
         end
-        "#{message[:_source].class} (#{message[:_source].id}) - #{str}"
+        "#{message[:_source].class.to_s.split('::').last} (#{message[:_source].id}) - #{str}"
       end
 
     end
