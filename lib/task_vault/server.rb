@@ -74,27 +74,27 @@ module TaskVault
     end
 
     def in(time, opts = {}, &block)
-      queue_task(create_task(opts.merge(start_time: Time.now + time), &block))
+      queue(create_task(opts.merge(start_time: Time.now + time), &block))
     end
 
     def after(time, opts = {}, &block)
-      queue_task(create_task(opts.merge(repeat: "after #{time}s"), &block))
+      queue(create_task(opts.merge(repeat: "after #{time}s"), &block))
     end
 
     def now(opts = {}, &block)
-      queue_task(create_task(opts.merge(start_time: Time.now), &block))
+      queue(create_task(opts.merge(start_time: Time.now), &block))
     end
 
     def at(time, opts = {}, &block)
-      queue_task(create_task(opts.merge(start_time: time), &block))
+      queue(create_task(opts.merge(start_time: time), &block))
     end
 
     def every(time, opts = {}, &block)
-      queue_task(create_task(opts.merge(repeat: "every #{time}s"), &block))
+      queue(create_task(opts.merge(repeat: "every #{time}s"), &block))
     end
 
     def cron(time, opts = {}, &block)
-      queue_task(create_task(opts.merge(repeat: cron), &block))
+      queue(create_task(opts.merge(repeat: cron), &block))
     end
 
     protected
