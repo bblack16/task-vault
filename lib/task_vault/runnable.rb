@@ -110,16 +110,31 @@ module TaskVault
       debug("#{name} has finished running after #{(timer.current || timer.last).to_duration}.")
     end
 
+    def process_failure
+      # Hook to perform an action if the runnable item fails
+    end
+
+    def process_success
+      # Hook to perform an action if the runnable item succeeds
+    end
+
+    def process_after
+      # Hook to perform an action after the runnable item finishes (success or failure)
+    end
+
     def init_thread(*args, &block)
       stop if running?
       self.thread = Thread.new do
         begin
           interval ? init_loop(*args, &block) : run(*args, &block)
+          process_success
         rescue => e
           fatal(e)
+          process_failure
         ensure
           timer.stop
           finished_run
+          process_after
         end
       end
     end
