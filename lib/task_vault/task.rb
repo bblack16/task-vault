@@ -14,34 +14,11 @@ module TaskVault
     attr_time :created, :queued, :added, :finished, :last_elevated, default: nil, allow_nil: true, serialize: false
     attr_int :initial_priority, default: nil, allow_nil: true, protected_writer: true, serialize: false
     attr_time :start_at, default: nil, allow_nil: true, serialize: false
-    attr_ary_of Task, :on_finish, add_rem: true
-    attr_ary_of Task, :on_success, add_rem: true
-    attr_ary_of Task, :on_failure, add_rem: true
 
     after :status=, :status_update
     after :start, :reset_start_at
     after :priority=, :set_initial_priority
 
-    # Add dependent tasks that run after this tasks completes a run
-    def then(task = {}, &block)
-      task = create_task(task, &block) if task.is_a?(Hash)
-      add_on_finish(task)
-    end
-
-    # Add dependent tasks that run only on success
-    def success(task = {}, &block)
-
-    end
-
-    # Add dependent tasks that run only on failure
-    def failure(task = {}, &block)
-
-    end
-
-    # Add dependent tasks that run only after this task is done executing completely
-    def finally(task = {}, &block)
-
-    end
 
     def create_task(opts = {}, &block)
       opts[:type] = :proc if block
@@ -57,7 +34,7 @@ module TaskVault
       end
     end
 
-    def start
+    def start(*args, &block)
       super.tap do |result|
         if result
           self.status = :running
@@ -133,24 +110,6 @@ module TaskVault
 
     def simple_setup
       self.parent = TaskVault::Overseer.prototype
-    end
-
-    def process_failure
-      on_failure.map do |task|
-        parent.add(task.serialize)
-      end
-    end
-
-    def process_success
-      on_success.map do |task|
-        parent.add(task.serialize)
-      end
-    end
-
-    def process_after
-      on_finish.map do |task|
-        parent.add(task.serialize)
-      end
     end
 
     def finished_run

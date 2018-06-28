@@ -22,17 +22,19 @@ module TaskVault
       base.send(:attr_str, :name, default_proc: proc { |x| x.id })
       base.send(:attr_float_between, 0, nil, :interval, default: nil, allow_nil: true)
       base.send(:attr_hash, :metadata)
+      base.send(:attr_ary, :default_args)
       base.send(:attr_of, Thread, :thread, default: nil, allow_nil: true, private_writer: true, serialize: false)
       base.send(:attr_of, MessageQueue, :message_queue, default_proc: proc { MessageQueue.new }, serialize: false)
       base.send(:attr_of, BBLib::TaskTimer, :timer, default_proc: proc { BBLib::TaskTimer.new }, serialize: false)
+      base.send(:attr_hash, :events, default_proc: proc { { success: [], failure: [], done: [], then: [] } })
       base.send(:attr_time, :started, :stopped, default: nil, allow_nil: true, serialize: false)
     end
 
-    def start
+    def start(*args, &block)
       return true if running?
       timer.start
       debug("#{self.class} (#{id}) is starting up...")
-      init_thread
+      init_thread(*args, &block)
       running? && self.started = Time.now ? true : false
     end
 
@@ -104,6 +106,18 @@ module TaskVault
       SecureRandom.uuid
     end
 
+    [:then, :success, :failure, :finally].each do |method|
+      define_method(method) do |opts = {}, &block|
+        unless opts.is_a?(Task)
+          opts[:type] = :proc if block
+          opts[:proc] = block if block
+          task = Task.new(opts)
+        end
+        events[method].push(task)
+        self
+      end
+    end
+
     protected
 
     def finished_run
@@ -111,19 +125,27 @@ module TaskVault
     end
 
     def process_failure
-      # Hook to perform an action if the runnable item fails
+      queue_up_events(*events[:failure])
     end
 
     def process_success
-      # Hook to perform an action if the runnable item succeeds
+      queue_up_events(*events[:success])
     end
 
     def process_after
-      # Hook to perform an action after the runnable item finishes (success or failure)
+      queue_up_events(*events[:then])
+      queue_up_events(*events[:done]) unless repeat?
+    end
+
+    def queue_up_events(*tasks)
+      [tasks].flatten.each do |task|
+        task.start(self) unless task.running?
+      end
     end
 
     def init_thread(*args, &block)
       stop if running?
+      args = default_args + args
       self.thread = Thread.new do
         begin
           interval ? init_loop(*args, &block) : run(*args, &block)
