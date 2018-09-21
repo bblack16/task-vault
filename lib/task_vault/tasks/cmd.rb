@@ -1,7 +1,7 @@
 module TaskVault
   class CMD < Task
 
-    attr_str :command, required: true, arg_at: 0
+    attr_str :command, required: true, arg_at: 0, aliases: [:cmd]
     attr_str :working_directory, default: nil, allow_nil: true
     attr_ary :arguments, default: []
 
@@ -21,13 +21,14 @@ module TaskVault
     end
 
     def compile_cmdline
-      [command, arguments].flatten.map do |argument|
+      compiled = [command] + arguments.flatten.map do |argument|
         if argument.include?(' ') && !argument.encap_by?('"')
           "\"#{argument.gsub('"', '\\"')}\""
         else
           argument.to_s
         end
-      end.join(' ')
+      end
+      compiled.join(' ')
     end
   end
 end
