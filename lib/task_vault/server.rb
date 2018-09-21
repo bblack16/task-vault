@@ -16,7 +16,7 @@ module TaskVault
     include BBLib::Effortless
     include BBLib::Prototype
 
-    attr_dir :path, mkdir: true, allow_nil: true, default: File.expand_path('/task_vault', Dir.pwd)
+    attr_dir :path, mkdir: true, allow_nil: true, default: TaskVault.default_path
     attr_ary_of Object, :components, default_proc: :_default_components, add_rem: true, adder_name: 'add', remover_name: 'remove'
 
     after :components=, :add, :register_components
@@ -94,7 +94,7 @@ module TaskVault
     end
 
     def cron(time, opts = {}, &block)
-      queue(create_task(opts.merge(repeat: cron), &block))
+      queue(create_task(opts.merge(repeat: time), &block))
     end
 
     protected
