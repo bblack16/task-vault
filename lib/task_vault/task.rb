@@ -92,7 +92,10 @@ module TaskVault
     def start_at
       return nil unless repeat || run_count.zero?
       return nil if status == :canceled
-      return nil if stop_time && stop_time >= Time.now
+      if stop_time && stop_time <= Time.now
+        self.status = :finished
+        return nil
+      end
       return nil if run_limit && run_limit <= run_count
       return start_time if start_time && run_count.zero?
       @start_at ||= calculate_start_at
