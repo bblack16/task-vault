@@ -3,7 +3,7 @@ module TaskVault
     include Runnable
     include BBLib::Prototype
 
-    attr_ary_of String, :paths
+    attr_ary_of String, :paths, default_proc: proc { [File.join(TaskVault.default_path, 'recipes')] }
     attr_bool :recursive, default: true
     attr_hash :recipes, protected_writer: true
 
