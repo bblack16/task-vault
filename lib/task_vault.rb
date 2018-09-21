@@ -1,4 +1,5 @@
 require 'bblib' unless defined?(BBLib::VERSION)
+require 'bblib/cron' unless defined?(BBLib::Cron)
 require 'securerandom'
 
 require_relative 'task_vault/version'
