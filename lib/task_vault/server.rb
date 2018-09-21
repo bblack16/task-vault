@@ -94,6 +94,7 @@ module TaskVault
     end
 
     def cron(time, opts = {}, &block)
+      raise ArgumentError, "Invalid cron pattern: #{time}" unless BBLib::Cron.valid?(time)
       queue(create_task(opts.merge(repeat: time), &block))
     end
 
