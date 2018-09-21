@@ -26,7 +26,7 @@ module TaskVault
       base.send(:attr_of, Thread, :thread, default: nil, allow_nil: true, private_writer: true, serialize: false)
       base.send(:attr_of, MessageQueue, :message_queue, default_proc: proc { MessageQueue.new }, serialize: false)
       base.send(:attr_of, BBLib::TaskTimer, :timer, default_proc: proc { BBLib::TaskTimer.new }, serialize: false)
-      base.send(:attr_hash, :events, default_proc: proc { { success: [], failure: [], done: [], then: [] } })
+      base.send(:attr_hash, :events, default_proc: proc { { success: [], failure: [], finally: [], then: [] } })
       base.send(:attr_time, :started, :stopped, default: nil, allow_nil: true, serialize: false)
     end
 
@@ -134,7 +134,7 @@ module TaskVault
 
     def process_after
       queue_up_events(*events[:then])
-      queue_up_events(*events[:done]) unless repeat?
+      queue_up_events(*events[:finally]) unless repeat?
     end
 
     def queue_up_events(*tasks)
