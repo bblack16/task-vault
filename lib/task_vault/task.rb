@@ -2,29 +2,53 @@ module TaskVault
   class Task
     include Runnable
 
+    # -------------
+    # Task Settings
+    # -------------
+    # Sets the global weight for this task. By default the task runner can only run
+    # a set amount of weight at a time.
     attr_float :weight, default: 1
+    # Sets the priority of the task. The lower the number the higher the priority.
+    # Priority zero means run immediately, ignoring weight limits.
     attr_int_between 0, nil, :priority, default: 10
+    # The max number of times this job can execute. nil means there is no limit.
     attr_int_between 0, nil, :run_limit, default: nil, allow_nil: true
+    # How long this task will be allowed to execute before it is killed.
     attr_float_between 0, nil, :timeout, :elevate_interval, default: nil, allow_nil: true
+    # If, how and when this task will repeat. Can be a count, a cron, a time based interval,
+    # a range (random number of times), true or false. True means repeat forever, false
+    # means never repeat.
     attr_of [String, Integer, TrueClass, FalseClass, Range], :repeat, default: false, allow_nil: true
+    # The number of seconds to wait before this task is executed.
     attr_float :delay, default: nil, allow_nil: true
+    # Preset times to run this task or to stop it if it is still running. nil
+    # disables the behavior.
     attr_time :start_time, :stop_time, default: nil, allow_nil: true
+    # A unique or random key used to determine when or when not to run this
+    # task if any other tasks with the same key are being run. Setting this to
+    # nil means the task can be run concurrently.
+    attr_str :concurrency_key, default: nil, allow_nil: true
+    # The number of concurrent instances of this task or any tasks with the same
+    # concurrency key can be run within a given Overseer.
+    attr_int :concurrency_cap, default: 1
+
+    # --------------------------------
+    # Attribute storage (non-settings)
+    # --------------------------------
+    # The current status of the task.
     attr_element_of STATUSES.keys, :status, default: :created, serialize: false
+    # The number of times the task has been run (success or failure)
     attr_int :run_count, default: 0, serialize: false, protected_writer: true
+    # Times for specific events related to this task.
     attr_time :created, :queued, :added, :finished, :last_elevated, default: nil, allow_nil: true, serialize: false
+    # The priority this task started with prior to an elevations.
     attr_int :initial_priority, default: nil, allow_nil: true, protected_writer: true, serialize: false
+    # The calculated time the task will next start at (when a slot is available)
     attr_time :start_at, default: nil, allow_nil: true, serialize: false
 
     after :status=, :status_update
     after :start, :reset_start_at
     after :priority=, :set_initial_priority
-
-
-    def create_task(opts = {}, &block)
-      opts[:type] = :proc if block
-      opts[:proc] = block if block
-      Task.new(opts)
-    end
 
     def message_queue
       if parent && parent != self
@@ -47,26 +71,47 @@ module TaskVault
       "#{id} (#{self.class})"
     end
 
+    # Immediately stops the running task and places it into the canceled state.
+    # For timeouts use timeout! instead.
     def cancel
       warn("Cancelling task #{name}...")
       self.status = :canceled
       stopped?
     end
 
+    # When called this task will be killed and set to a state of timed out. Use
+    # cancel! for non timeout related kills.
     def timeout!
       warn("Task #{name} has timedout.")
       self.status = :timedout
       stopped?
     end
 
+    # Holds the current tread until this task finishes or a timeout is reached.
+    # Will return true if the job finished, false if the time runs out first.
+    def wait!(timeout = nil, sleep_interval = 0.1)
+      start = Time.now.to_f
+      sleep(sleep_interval) until finished? || timeout && Time.now.to_f - start > timeout
+      timeout ? (Time.now.to_f - start > timeout) : true
+    end
+
+    # Returns true if this task should be timedout.
     def timeout?
       running? && timeout && Time.now - started > timeout
     end
 
+    # Returns true if this task is currently in one of the finished states.
     def finished?
       STATUSES[self.status][:queue] == :finished
     end
 
+    # Similar to finished but only returns true if the task will also no longer
+    # repeat again.
+    def completed?
+      finished? && !repeat?
+    end
+
+    # Returns true if this task is in any errored state.
     def errored?
       [:errored, :timedout].any? { |status| status == self.status }
     end
