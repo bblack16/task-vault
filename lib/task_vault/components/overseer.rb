@@ -44,8 +44,8 @@ module TaskVault
     end
 
     def sort!
-      tasks.sort_by do |task|
-        [Task::STATUSES[task.status][:sort], task.priority]
+      tasks.sort_by! do |task|
+        [Task::STATUSES[task.status][:sort], task.priority, task.start_at.to_f || task.queued.to_f]
       end
     end
 
@@ -66,6 +66,17 @@ module TaskVault
       !queued.empty? || !running.empty? || finished.any?(&:repeat?)
     end
 
+    def task_ready?(task)
+      return false unless task.is_a?(Task)
+      return false unless task.ready?
+      return false unless task.priority.zero? || used_capacity + task.weight <= capacity
+      if task.concurrency_key
+        current_count = running.count { |t| task.concurrency_key == t.concurrency_key }
+        return false if current_count >= task.concurrency_cap
+      end
+      true
+    end
+
     protected
 
     def simple_setup
@@ -84,7 +95,7 @@ module TaskVault
     def process_queued
       return if used_capacity >= capacity || queued.empty?
       queued.map do |task|
-        next unless task.ready? && (task.priority.zero? || used_capacity + task.weight <= capacity)
+        next unless task_ready?(task)
         task.start
       end.compact.size
     end
