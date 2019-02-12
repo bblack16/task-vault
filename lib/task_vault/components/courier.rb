@@ -10,10 +10,20 @@ module TaskVault
     include BBLib::Prototype
 
     attr_of Object, :parent, default_proc: proc { TaskVault::Server.prototype }
-    attr_ary_of MessageHandler, :handlers, default_proc: proc { [MessageHandlers::Default.new] }, add_rem: true, adder_name: :add, remover_name: :remove
+    attr_ary_of MessageHandler, :handlers, default_proc: proc { [MessageHandlers::Default.new] }, remover: true, remover_name: :remove
+
+    def add(handler = {}, &block)
+      if handler.is_a?(Hash)
+        handler[:type] = :proc if block && !handler[:type]
+        handler = MessageHandler.new(handler, &block)
+      end
+      handlers << handler unless handlers.include?(handler)
+      handler
+    end
 
     def process(message)
       handlers.each do |handler|
+        next unless handler.listen?(message)
         handler.push(message)
       end
     end
