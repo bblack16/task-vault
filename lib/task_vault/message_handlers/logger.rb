@@ -7,7 +7,7 @@ module TaskVault
       protected
 
       def process_message(message)
-        logger.send(message[:severity] || :info, message[:message])
+        logger.send(message.severity || :info, message.content)
       rescue => e
         puts e, e.backtrace
       end
