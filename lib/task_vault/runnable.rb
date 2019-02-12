@@ -20,7 +20,7 @@ module TaskVault
       base.send(:attr_of, Object, :parent, default_proc: proc { TaskVault::Overseer.prototype }, allow_nil: true, default: nil, serialize: false)
       base.send(:attr_str, :id, default_proc: :generate_id)
       base.send(:attr_str, :name, default_proc: proc { |x| x.id })
-      base.send(:attr_float_between, 0, nil, :interval, default: nil, allow_nil: true)
+      base.send(:attr_float_between, 0, nil, :interval, :delay, default: nil, allow_nil: true)
       base.send(:attr_hash, :metadata)
       base.send(:attr_ary, :default_args)
       base.send(:attr_of, Thread, :thread, default: nil, allow_nil: true, private_writer: true, serialize: false)
@@ -82,10 +82,10 @@ module TaskVault
     def queue_message(message, details = {})
       defaults = {
         severity: message.is_a?(Exception) ? :error : :info,
-        event: :default,
+        event: [:default, self.type],
         _source: self
       }
-      message_queue.write(message, defaults.merge(queue_metadata).merge(details))
+      message_queue.write(message, defaults.deep_merge(queue_metadata).deep_merge(details))
     end
 
     alias queue_msg queue_message
@@ -148,6 +148,7 @@ module TaskVault
       args = default_args + args
       self.thread = Thread.new do
         begin
+          sleep(delay) if delay
           interval ? init_loop(*args, &block) : run(*args, &block)
           process_success
         rescue => e
