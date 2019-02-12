@@ -10,6 +10,7 @@ require_relative 'task_vault/task'
 require_relative 'task_vault/components/overseer'
 require_relative 'task_vault/components/courier'
 require_relative 'task_vault/components/workbench'
+require_relative 'task_vault/components/sentry'
 require_relative 'task_vault/server'
 
 require_relative 'task_vault/tasks/cmd'
