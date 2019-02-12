@@ -49,7 +49,27 @@ module TaskVault
     end
 
     def component_of(klass)
-      components.find { |component| component.is_a?(klass) }
+      components_of(klass).first
+    end
+
+    def components_of(klass)
+      components.find_all { |component| component.is_a?(klass) }
+    end
+
+    def overseer
+      component_of(Overseer)
+    end
+
+    def courier
+      component_of(Courier)
+    end
+
+    def sentry
+      component_of(Sentry)
+    end
+
+    def workbench
+      component_of(Workbench)
     end
 
     def running?
@@ -105,7 +125,7 @@ module TaskVault
     end
 
     def _default_components
-      [Overseer.prototype, Courier.prototype, Workbench.prototype]
+      [Overseer.prototype, Courier.prototype, Workbench.prototype, Sentry.prototype]
     end
 
     def register_components
