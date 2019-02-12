@@ -1,17 +1,19 @@
+require_relative 'message'
+
 module TaskVault
-  class MessageQueue
+  class MessageQueue < BBLib::HashStruct
     include BBLib::Effortless
 
-    attr_ary_of Hash, :queue, :history, default: [], private_writer: true
+    attr_ary_of Message, :queue, :history, default: [], private_writer: true
     attr_int_between 0, nil, :limit, default: 100_000
     attr_int_between 0, nil, :history_limit, default: 100
     attr_int :written_messages, :read_messages, :dropped_messages, default: 0, serialize: false
 
     def write(message, details = {})
-      payload = details.merge(default_metadata).merge(message: message)
-      write_history(payload)
+      message = Message.new(details.merge(message: message)) unless message.is_a?(Message)
+      write_history(message)
       self.written_messages += 1
-      queue.push(payload).tap { |x| clean_queue }
+      queue.push(message).tap { |x| clean_queue }
     rescue => e
       queue.push({ message: e, severity: :fatal })
     end
@@ -53,12 +55,6 @@ module TaskVault
     end
 
     protected
-
-    def default_metadata
-      {
-        time: Time.now
-      }
-    end
 
     def write_history(payload)
       history.push(payload).tap do |_payload|
