@@ -14,7 +14,7 @@ module TaskVault
         @pid = w.pid
         [o, e].each do |stream|
           stream.each do |line|
-            queue_message(line, severity: (stream == o ? :info : :error), event: (stream == o ? :stdout : :stderr))
+            queue_message(line, severity: (stream == o ? :info : :error), event: [(stream == o ? :stdout : :stderr)])
           end
         end
       end
