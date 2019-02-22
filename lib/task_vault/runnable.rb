@@ -19,14 +19,14 @@ module TaskVault
       base.send(:include, BBLib::TypeInit)
       base.send(:attr_of, Object, :parent, default_proc: proc { TaskVault::Overseer.prototype }, allow_nil: true, default: nil, serialize: false)
       base.send(:attr_str, :id, default_proc: :generate_id)
-      base.send(:attr_str, :name, default_proc: proc { |x| x.id })
+      base.send(:attr_str, :name, default_proc: proc { |x| x.class.to_s.split('::').last.method_case })
       base.send(:attr_float_between, 0, nil, :interval, :delay, default: nil, allow_nil: true)
       base.send(:attr_hash, :metadata)
       base.send(:attr_ary, :default_args)
       base.send(:attr_of, Thread, :thread, default: nil, allow_nil: true, private_writer: true, serialize: false)
       base.send(:attr_of, MessageQueue, :message_queue, default_proc: proc { MessageQueue.new }, serialize: false)
       base.send(:attr_of, BBLib::TaskTimer, :timer, default_proc: proc { BBLib::TaskTimer.new }, serialize: false)
-      base.send(:attr_hash, :events, default_proc: proc { { success: [], failure: [], finally: [], then: [] } })
+      base.send(:attr_hash, :events, default_proc: proc { { success: [], failure: [], finally: [], then: [] } }, serialize: false)
       base.send(:attr_time, :started, :stopped, default: nil, allow_nil: true, serialize: false)
     end
 
@@ -64,11 +64,11 @@ module TaskVault
     end
 
     def repeat?
-      start_at ? true : false
+      false
     end
 
     def ready?
-      start_at && Time.now >= start_at
+      true
     end
 
     def register_to(parent)
