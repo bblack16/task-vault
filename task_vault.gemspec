@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["d2sm10@hotmail.com"]
 
   spec.summary       = 'A simple and powerful task runner written in Ruby.'
-  spec.description   = 'A simple and powerful task runner written in Ruby.'
+  spec.description   = 'Easily run basic or advanced tasks in Ruby threads based on all kinds of timers and behavior.'
   spec.homepage      = "http://github.com/bblack16/task-vault"
   spec.license       = "MIT"
 
@@ -31,6 +31,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.0"
 
-  spec.add_runtime_dependency 'bblib', "~> 0.4"
-  spec.add_runtime_dependency 'ava', "> 0.1"
+  spec.add_runtime_dependency 'bblib', '~> 2.0'
 end
