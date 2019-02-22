@@ -9,7 +9,7 @@ module TaskVault
     include Runnable
     include BBLib::Prototype
 
-    attr_of Object, :parent, default_proc: proc { TaskVault::Server.prototype }
+    attr_of Object, :parent, default_proc: proc { TaskVault::Server.prototype }, serialize: false
     attr_ary_of MessageHandler, :handlers, default_proc: proc { [MessageHandlers::Default.new] }, remover: true, remover_name: :remove
 
     def add(handler = {}, &block)
