@@ -5,7 +5,7 @@ module TaskVault
     SEVERITIES = [:unknown, :data, :trace, :debug, :info, :warn, :error, :fatal].freeze
 
     attr_of Object, :content, aliases: :message, arg_at: 0
-    attr_of Object, :_source, default: nil, allow_nil: true
+    attr_of Object, :_source, default: nil, allow_nil: true, serialize: false
     attr_ary :event_key, aliases: [:event], default: [:default], pre_proc: proc { |*x| x.flatten.map { |s| s.to_s.to_sym } }
     attr_element_of SEVERITIES, :severity, default: :debug, pre_proc: proc { |x| SEVERITIES.include?(x.to_s.to_sym) ? x.to_s.to_sym : :unknown }
     attr_time :created
